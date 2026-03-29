@@ -1,0 +1,2305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoCircuit Lab — Electrical Wiring Trainer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --surface: #f0f0f0;
+    --surface2: #e0e0e0;
+    --border: #cccccc;
+    --accent: #d4900a;
+    --accent2: #0077aa;
+    --green: #2a9a40;
+    --red: #cc2222;
+    --text: #111111;
+    --text-muted: #555555;
+    --pin-idle: #4a90d9;
+    --pin-hover: #0077aa;
+    --pin-connected: #2a9a40;
+    --grid: rgba(0,0,0,0.05);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Exo 2', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* TOP BAR — two rows */
+  #topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  #topbarMain {
+    padding: 0 12px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+  }
+  #topbarMain::-webkit-scrollbar { display: none; }
+  #topbarTabs {
+    padding: 5px 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    background: var(--surface);
+  }
+  #topbarTabs::-webkit-scrollbar { display: none; }
+  .logo {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.2rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 2px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .logo span { color: var(--accent2); }
+  .sep { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+  .spacer { flex: 1; min-width: 4px; }
+
+  /* Circuit Tabs */
+  #circuitTabs { display: contents; }
+  .circuit-tab {
+    padding: 4px 10px;
+    border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text-muted);
+    font-family: 'Rajdhani', sans-serif; font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.5px; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0;
+  }
+  .circuit-tab:hover { border-color: var(--accent2); color: var(--accent2); }
+  .circuit-tab.active { background: var(--accent); border-color: var(--accent); color: #000; }
+  .circuit-tab.locked { opacity: 0.38; cursor: not-allowed; font-style: italic; }
+  .circuit-tab.locked:hover { border-color: var(--border); color: var(--text-muted); }
+
+  /* Wire colors */
+  #wireColorPicker { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--text-muted); flex-shrink: 0; }
+  .color-btn {
+    width: 19px; height: 19px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s; flex-shrink: 0;
+  }
+  .color-btn:hover { transform: scale(1.25); }
+  .color-btn.active { border-color: white; transform: scale(1.25); }
+
+  /* Buttons */
+  .top-btn {
+    padding: 5px 11px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text);
+    font-family: 'Exo 2', sans-serif; font-size: 0.76rem;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .top-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .top-btn.primary { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+  .top-btn.primary:hover { background: #ffc62b; }
+  .top-btn.danger { border-color: var(--red); color: var(--red); }
+  .top-btn.danger:hover { background: var(--red); color: white; }
+  .top-btn.active-mode { border-color: var(--accent2); color: var(--accent2); background: rgba(0,212,255,0.08); }
+
+  #modeIndicator {
+    font-size: 0.7rem; padding: 4px 8px; border-radius: 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
+  }
+  #modeIndicator.wire-mode { border-color: var(--accent2); color: var(--accent2); }
+
+  /* Zoom controls */
+  #zoomControls { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+  .zoom-btn {
+    width: 24px; height: 24px; border-radius: 5px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); cursor: pointer; font-size: 0.9rem;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .zoom-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  #zoomLabel { font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--text-muted); min-width: 36px; text-align: center; }
+
+  /* MAIN */
+  #main { display: flex; flex: 1; overflow: hidden; }
+
+  /* LEFT PANEL */
+  #leftpanel {
+    width: 196px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0;
+  }
+  .panel-section { padding: 10px; border-bottom: 1px solid var(--border); }
+  .panel-label {
+    font-family: 'Rajdhani', sans-serif; font-size: 0.66rem;
+    letter-spacing: 2px; color: var(--text-muted);
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .status-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; padding: 2px 0; color: var(--text-muted); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .status-dot.ok { background: var(--green); }
+  .status-dot.err { background: var(--red); }
+  .legend-row { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--text-muted); padding: 2px 0; }
+  .legend-line { width: 22px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+
+  /* CANVAS */
+  #canvasWrap {
+    flex: 1; position: relative; overflow: hidden;
+    background: var(--bg);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  #canvasTransform { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  #canvas { position: relative; width: 1800px; height: 1400px; }
+
+  /* Components */
+  .comp-node { position: absolute; user-select: none; cursor: grab; }
+  .comp-node:active { cursor: grabbing; }
+  .comp-body {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 5px 7px;
+    display: flex; flex-direction: column; align-items: center;
+    transition: border-color 0.15s; pointer-events: none;
+  }
+  .comp-node.selected .comp-body { border-color: var(--accent2) !important; box-shadow: 0 0 0 2px rgba(0,212,255,0.3); }
+  .comp-img {
+    object-fit: contain; border-radius: 4px; background: #ffffff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; color: var(--text-muted); margin-bottom: 3px;
+  }
+  .comp-img img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; }
+  .comp-label {
+    font-family: 'Rajdhani', sans-serif; font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.7px; color: var(--text-muted); text-align: center; white-space: nowrap; text-transform: uppercase;
+  }
+
+  /* Pins */
+  .pin {
+    position: absolute; width: 13px; height: 13px; border-radius: 50%;
+    background: var(--pin-idle); border: 2px solid #ffffff;
+    cursor: crosshair; z-index: 10;
+    transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    transform: translate(-50%, -50%);
+  }
+  .pin:hover { background: var(--pin-hover); transform: translate(-50%,-50%) scale(1.5); box-shadow: 0 0 8px var(--pin-hover); z-index: 20; }
+  .pin.connected { background: var(--pin-connected); }
+  .pin.drawing-start { background: var(--accent); transform: translate(-50%,-50%) scale(1.6); box-shadow: 0 0 12px var(--accent); }
+  .pin-tooltip {
+    position: absolute; background: rgba(0,0,0,0.9); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 6px; font-size: 0.61rem;
+    white-space: nowrap; pointer-events: none; z-index: 200;
+    color: var(--text); top: -25px; left: 50%; transform: translateX(-50%);
+  }
+
+  /* Wires */
+  #wireSvg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; overflow: visible; }
+  .wire-path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; cursor: pointer; pointer-events: stroke; transition: stroke-width 0.15s; }
+  .wire-path:hover { stroke-width: 4.5; }
+  .wire-drawing { fill: none; stroke: var(--accent2); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; animation: dash 0.5s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -10; } }
+
+  /* RIGHT PANEL */
+  #rightpanel { width: 236px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+  #feedbackArea { flex: 1; overflow-y: auto; padding: 8px; }
+  .feedback-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 8px 10px; margin-bottom: 6px;
+    font-size: 0.73rem; line-height: 1.5; animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; } }
+  .feedback-card.correct { border-color: var(--green); }
+  .feedback-card.wrong   { border-color: var(--red); }
+  .feedback-card.hint    { border-color: var(--accent); }
+  .feedback-card.info    { border-color: var(--accent2); }
+  .fc-header { display: flex; align-items: center; gap: 5px; font-family: 'Rajdhani',sans-serif; font-size: 0.76rem; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 3px; text-transform: uppercase; }
+  .feedback-card.correct .fc-header { color: var(--green); }
+  .feedback-card.wrong   .fc-header { color: var(--red); }
+  .feedback-card.hint    .fc-header { color: var(--accent); }
+  .feedback-card.info    .fc-header { color: var(--accent2); }
+  .feedback-card p { color: var(--text-muted); }
+
+  #scoreBar { padding: 8px 10px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+  .score-label { display: flex; justify-content: space-between; font-family: 'Rajdhani',sans-serif; font-size: 0.74rem; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 5px; }
+  #scoreValue { color: var(--accent); font-weight: 700; }
+  .score-track { height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .score-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 4px; transition: width 0.5s ease; width: 0%; }
+
+  /* Modals */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 450px; width: 90%; max-height: 80vh; overflow-y: auto; }
+  .modal h2 { font-family: 'Rajdhani',sans-serif; font-size: 1.05rem; letter-spacing: 2px; color: var(--accent); margin-bottom: 12px; }
+  .modal p { color: var(--text-muted); font-size: 0.8rem; line-height: 1.6; margin-bottom: 8px; }
+  .modal .close-btn { margin-top: 12px; padding: 7px 16px; background: var(--accent); color: #000; border: none; border-radius: 6px; font-family: 'Rajdhani',sans-serif; font-weight: 700; font-size: 0.86rem; letter-spacing: 1px; cursor: pointer; }
+  .grade-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+  .grade-row:last-child { border-bottom: none; }
+  .grade-ok { color: var(--green); }
+  .grade-fail { color: var(--red); }
+  .grade-hint { color: var(--accent); font-size: 0.7rem; margin-top: 2px; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+
+  <!-- Row 1: Logo + controls -->
+  <div id="topbarMain">
+    <div class="logo">AUTO<span>331<span>CIRCUIT</span> LAB</div>
+    <div class="sep"></div>
+
+    <div id="wireColorPicker">
+      <span>Wire:</span>
+      <div class="color-btn active" style="background:#f0a500" data-color="#f0a500" title="Yellow / Signal"></div>
+      <div class="color-btn" style="background:#f85149" data-color="#f85149" title="Red / Power"></div>
+      <div class="color-btn" style="background:#3fb950" data-color="#3fb950" title="Green / Motor"></div>
+      <div class="color-btn" style="background:#00d4ff" data-color="#00d4ff" title="Blue"></div>
+      <div class="color-btn" style="background:#d2a8ff" data-color="#d2a8ff" title="Purple"></div>
+      <div class="color-btn" style="background:#ffffff" data-color="#ffffff" title="White"></div>
+      <div class="color-btn" style="background:#020202"    data-color="#020202"    title="Black / Ground"></div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div id="zoomControls">
+      <button class="zoom-btn" onclick="adjustZoom(-0.15)"  title="Zoom Out">−</button>
+      <span id="zoomLabel">85%</span>
+      <button class="zoom-btn" onclick="adjustZoom(0.15)"   title="Zoom In">+</button>
+      <button class="zoom-btn" onclick="resetZoom()" style="font-size:0.62rem;width:32px;" title="Fit to view">FIT</button>
+    </div>
+
+    <div class="sep"></div>
+    <div id="modeIndicator">✦ SELECT</div>
+    <button class="top-btn" id="wireModeBtn" onclick="toggleWireMode()">✏ Wire Mode</button>
+    <button class="top-btn danger" onclick="clearAllWires()">✕ Clear</button>
+    <button class="top-btn primary" onclick="gradeCircuit()">⚡ Grade</button>
+  </div>
+
+  <!-- Row 2: Circuit tabs -->
+  <div id="topbarTabs">
+    <div id="circuitTabs">
+      <div class="circuit-tab active"  onclick="switchCircuit(0)">① Power Windows</div>
+      <div class="circuit-tab"  onclick="switchCircuit(1)">② Transistor / LED</div>
+      <div class="circuit-tab"  onclick="switchCircuit(2)">③ Horn Circuit</div>
+      <div class="circuit-tab"  onclick="switchCircuit(3)">④ Cooling Fan</div>
+      <div class="circuit-tab"  onclick="switchCircuit(4)">⑤ Airbag</div>
+      <div class="circuit-tab locked"  title="Coming soon">⑥ Circuit 6</div>
+      <div class="circuit-tab locked"  title="Coming soon">⑦ Circuit 7</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT -->
+  <div id="leftpanel">
+    <div class="panel-section">
+      <div class="panel-label">How to Use</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);line-height:1.65;">
+        <b style="color:var(--accent2)">1.</b> Choose a circuit tab above.<br>
+        <b style="color:var(--accent2)">2.</b> Click <b>Wire Mode</b>, then click a <b>pin</b> to start a wire.<br>
+        <b style="color:var(--accent2)">3.</b> Click a second pin to complete it.<br>
+        <b style="color:var(--accent2)">4.</b> <b>Scroll wheel</b> = zoom in/out.<br>
+        <b style="color:var(--accent2)">5.</b> <b>Right-click &amp; drag</b> = pan canvas.<br>
+        <b style="color:var(--accent2)">6.</b> In <b>Select mode</b>, drag components.<br>
+        <b style="color:var(--accent2)">7.</b> <b>Double-click</b> a wire to delete it.<br>
+        <b style="color:var(--accent2)">8.</b> <b>ESC</b> cancels current wire.<br>
+        <b style="color:var(--accent2)">9.</b> Click <b>Grade</b> when finished.
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Wire Color Guide</div>
+      <div class="legend-row"><div class="legend-line" style="background:#f85149"></div>Red — 12V Power</div>
+      <div class="legend-row"><div class="legend-line" style="background:#060606"></div>Black — Ground</div>
+      <div class="legend-row"><div class="legend-line" style="background:#f0a500"></div>Yellow — Signal</div>
+      <div class="legend-row"><div class="legend-line" style="background:#3fb950"></div>Green — Motor Drive</div>
+    </div>
+
+    <div class="panel-section" id="statusSection" style="display:none;">
+      <div class="panel-label">Connection Status</div>
+      <div id="statusList" style="font-size:0.69rem;"></div>
+    </div>
+
+    <div class="panel-section" id="progressSection" style="display:none;">
+      <div class="panel-label">Progress</div>
+      <div id="progressText" style="font-family:'Share Tech Mono',monospace;font-size:0.71rem;color:var(--text-muted);">0 / 0 connections</div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvasWrap">
+    <div id="canvasTransform">
+      <div id="canvas">
+        <svg id="wireSvg" style="position:absolute;top:0;left:0;width:1800px;height:1400px;overflow:visible;pointer-events:none;z-index:5;"></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="rightpanel">
+    <div class="panel-section" style="display:flex; flex-direction:column; gap:7px;">
+      <button onclick="showInstructions()" style="
+        padding:10px 12px; border-radius:7px; border:1px solid var(--accent);
+        background:var(--accent); color:#000; font-family:'Rajdhani',sans-serif;
+        font-size:0.85rem; font-weight:700; letter-spacing:1px; cursor:pointer;
+        transition:all 0.15s; text-align:left;">
+        📋 View Instructions
+      </button>
+      <button onclick="beginAssignment()" style="
+        padding:10px 12px; border-radius:7px; border:1px solid var(--accent2);
+        background:var(--accent2); color:#fff; font-family:'Rajdhani',sans-serif;
+        font-size:0.85rem; font-weight:700; letter-spacing:1px; cursor:pointer;
+        transition:all 0.15s; text-align:left;">
+        ▶ Begin Assignment
+      </button>
+    </div>
+    <div class="panel-section">
+      <div class="panel-label">Feedback &amp; Hints</div>
+    </div>
+    <div id="feedbackArea">
+      <div class="feedback-card info">
+        <div class="fc-header">⚡ Welcome</div>
+        <p>Click <b>View Instructions</b> to read the assignment, then <b>Begin Assignment</b> to start wiring.</p>
+      </div>
+    </div>
+    <div id="scoreBar">
+      <div class="score-label"><span>SCORE</span><span id="scoreValue">—</span></div>
+      <div class="score-track"><div class="score-fill" id="scoreFill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Grade Modal -->
+<div id="gradeModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h2>⚡ GRADE REPORT</h2>
+    <div id="gradeContent"></div>
+    <button class="close-btn" onclick="document.getElementById('gradeModal').style.display='none'">Close</button>
+  </div>
+</div>
+
+<!-- Instructions Overlay -->
+<div id="instructionsOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; flex-direction:column; gap:20px;">
+  <div style="background:#f8f8f8; border-radius:12px; padding:24px; max-width:700px; width:92%; max-height:85vh; overflow-y:auto; position:relative;">
+    <div style="font-family:'Rajdhani',sans-serif; font-size:1.1rem; font-weight:700; letter-spacing:2px; color:#d4900a; margin-bottom:14px;" id="instructionsTitle">INSTRUCTIONS</div>
+    <div id="instructionsContent" style="font-size:0.88rem; color:#333; line-height:1.7;">
+      <p style="margin-bottom:10px;">Your instructor will provide a PowerPoint slide or instruction sheet for this assignment.</p>
+      <p style="margin-bottom:10px;">To add your own instructions for each circuit, open the HTML file in a text editor and find the <code>CIRCUITS</code> array. Each circuit has an <code>instructions</code> field where you can add HTML content that will appear here.</p>
+      <p>Example:<br><code>instructions: '&lt;b&gt;Task:&lt;/b&gt; Wire the power window circuit as shown in the diagram...'</code></p>
+    </div>
+    <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+      <button onclick="closeInstructions()" style="padding:8px 18px; border-radius:6px; border:1px solid #ccc; background:#eee; font-family:'Exo 2',sans-serif; font-size:0.82rem; cursor:pointer;">Close</button>
+      <button onclick="beginAssignment()" style="padding:8px 22px; border-radius:6px; border:none; background:#d4900a; color:#fff; font-family:'Rajdhani',sans-serif; font-weight:700; font-size:0.9rem; letter-spacing:1px; cursor:pointer;">▶ Begin Assignment</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================================
+//  AUTOCIRCUIT LAB  v2  —  ENGINE
+// =====================================================================
+
+const canvasWrap      = document.getElementById('canvasWrap');
+const canvasTransform = document.getElementById('canvasTransform');
+const canvas          = document.getElementById('canvas');
+const wireSvg         = document.getElementById('wireSvg');
+
+// ── Zoom / Pan ──
+let zoom = 0.85, panX = 20, panY = 20;
+let isPanning = false, panStart = {x:0,y:0};
+
+// ── Editor state ──
+let wireMode = false;
+let drawingWire = null;
+let wires = [];
+let dragState = null;
+let currentWireColor = '#f0a500';
+let wireIdCounter = 0;
+let attemptCount = 0;
+const MAX_ATTEMPTS = 3;
+const savedWires = {};  // circuitIndex → wires[]
+const savedAttempts = {};
+// ── Active circuit ──
+let activeCircuitIndex = 0;
+let circDef = null;   // shorthand for active circuit definition
+let components = {};  // id → { def, el, pins:{id→{el,localX,localY}} }
+
+// =====================================================================
+//  CIRCUIT DEFINITIONS
+//  To unlock a future circuit:
+//    1. Fill in its componentDefs, correctConnections, connectionFeedback below
+//    2. Remove the class="locked" from its tab button in the HTML
+// =====================================================================
+
+const CIRCUITS = [
+
+  // ── 0: POWER WINDOW ─────────────────────────────────────────────────
+  {
+    title: 'Assignment 1 — Power Window Circuit',
+    instructions: `
+      <h3 style="margin-bottom:10px;color:#d4900a;">Assignment 1: Power Window Circuit</h3>
+      <p style="margin-bottom:8px;"><b>Objective:</b> Wire a complete power window circuit using the components provided.</p>
+      <p style="margin-bottom:8px;"><b>Components:</b> Battery, Ignition Switch, Circuit Breaker, Master Power Window Switch, Passenger Power Window Switch, Left Motor, Right Motor, and 2 Grounds.</p>
+      <p style="margin-bottom:8px;"><b>Helpful Hints:</b></p>
+      <ol style="margin-left:18px;line-height:1.8;">
+        <li>A circuit breaker is used to prevent excessive current in the circuit during window motor operation. 
+Mechanical resistance to the operation of the motor will cause an increase in the current.</li>
+        <li>The ignition switch is used to prevent window operation when the switch is in the off position.</li>
+        <li>Both the right and left power window motors can be operated by the master power window switch.</li>
+        <li>The passenger window motor operates the right power window motor. Both the passenger window switch and the master power window switch need to be able to control the right power window motor.</li>
+        <li>Window motors require power and ground to operate. Reversing the polarity of the motor will reverse the direction of rotation for the motor.</li>
+              </ol>
+      <p style="margin-top:10px;color:#888;font-size:0.82rem;">Click <b>Begin Assignment</b> to start wiring. Click <b>Grade</b> when finished.</p>
+    `,
+    universalGroups: {
+      ground: ['gnd1','gnd2']
+    },
+    componentDefs: [
+      {
+        id:'battery', label:'Battery', emoji:'🔋',
+        imageSrc:'images/battery.png',
+        x:280, y:100, w:130, h:50,
+        pins:[
+          {id:'neg', label:'Negative (−)', side:'left'},
+          {id:'pos', label:'Positive (+)', side:'right'}
+        ]
+      },
+      {
+        id:'ignition', label:'Ignition Switch', emoji:'🔑',
+        imageSrc:'images/ignition.png',
+        x:520, y:100, w:130, h:60,
+        pins:[
+          {id:'top', label:'Top (B+)',     side:'top',    index:0, total:1},
+          {id:'bot', label:'Bottom (ACC)', side:'bottom', index:0, total:1}
+        ]
+      },
+      {
+        id:'breaker', label:'Circuit Breaker', emoji:'⚡',
+        imageSrc:'images/breaker.png',
+        x:520, y:290, w:130, h:50,
+        pins:[
+          {id:'left',  label:'Left (In)',  side:'left'},
+          {id:'right', label:'Right (Out)',side:'right'}
+        ]
+      },
+      {
+        id:'masterSwitch', label:'Master PW Switch', emoji:'🎛',
+        imageSrc:'images/masterSwitch.png',
+        x:200, y:490, w:200, h:60,
+        pins:[
+          {id:'top0', label:'Top — Power In',          side:'top',    index:0, total:1},
+          {id:'bot0', label:'Bot-1 — Ground',           side:'bottom', index:0, total:5},
+          {id:'bot1', label:'Bot-2 — Left Motor A',     side:'bottom', index:1, total:5},
+          {id:'bot2', label:'Bot-3 — Left Motor B',     side:'bottom', customX:0.375},
+          {id:'bot3', label:'Bot-4 — Psgr SW Left',     side:'bottom', index:3, total:5},
+          {id:'bot4', label:'Bot-5 — Psgr SW Mid',      side:'bottom', customX:0.875},
+        ]
+      },
+      {
+        id:'passengerSwitch', label:'Passenger PW Switch', emoji:'🎚',
+        imageSrc:'images/passengerSwitch.png',
+        x:620, y:490, w:200, h:95,
+        pins:[
+          {id:'top0', label:'Top-L — from Master',  side:'top',    customX:0.375},
+          {id:'top1', label:'Top-M — from Master',  side:'top',    customX:0.625},
+          {id:'top2', label:'Top-R — Power In',     side:'top',    customX:0.875},,
+          {id:'bot0', label:'Bot-L — Right Motor A',side:'bottom', index:0, total:2},
+          {id:'bot1', label:'Bot-R — Right Motor B',side:'bottom', index:1, total:2}
+        ]
+      },
+      {
+        id:'leftMotor', label:'Left PW Motor', emoji:'⚙',
+        imageSrc:'images/leftMotor.png',
+        x:190, y:720, w:125, h:85,
+        pins:[
+          {id:'topL', label:'Top-L (A)', side:'top', customX:0.25, total:2},
+          {id:'topR', label:'Top-R (B)', side:'top', customX:0.75, total:2}
+        ]
+      },
+      {
+        id:'rightMotor', label:'Right PW Motor', emoji:'⚙',
+        imageSrc:'images/rightMotor.png',
+        x:660, y:720, w:125, h:85,
+        pins:[
+          {id:'topL', label:'Top-L (A)', side:'top', customX:0.25, total:2},
+          {id:'topR', label:'Top-R (B)', side:'top', customX:0.75, total:2}
+        ]
+      },
+      {
+        id:'gnd1', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:80, y:200, w:100, h:60,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      },
+      {
+        id:'gnd2', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:80, y:570, w:100, h:60,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      }
+    ],
+    correctConnections: [
+      ['battery','neg',         'ANY_ground','pin'],
+      ['battery','pos',         'ignition','top'],
+      ['ignition','bot',        'breaker','left'],
+      ['breaker','right',       'masterSwitch','top0'],
+      ['breaker','right',       'passengerSwitch','top2'],
+      ['masterSwitch','bot0',   'ANY_ground','pin'],
+      ['masterSwitch','bot1',   'leftMotor','topL'],
+      ['masterSwitch','bot2',   'leftMotor','topR'],
+      ['masterSwitch','bot3',   'passengerSwitch','top0'],
+      ['masterSwitch','bot4',   'passengerSwitch','top1'],
+      ['passengerSwitch','bot0','rightMotor','topL'],
+      ['passengerSwitch','bot1','rightMotor','topR']
+    ],
+    connectionFeedback: {
+  'battery:neg': 'Every circuit needs a complete current path. The battery negative establishes the ground reference for the entire circuit. Which symbol on the diagram represents the chassis ground that the battery negative must connect to?',
+  'battery:pos': 'Battery positive is the source of power for the entire circuit. In a wiring diagram, power flows from the top down. Which component at the top of the diagram acts as a gatekeeper — only allowing power to reach the window switches when it is turned on?',
+  'ignition:top': 'The ignition switch controls whether the rest of the circuit receives power. Think about the flow of current from the battery — which terminal of the ignition switch should receive battery positive so that the driver can control when the windows operate?',
+  'ignition:bot': 'When the ignition switch is turned on, current must continue through the circuit. Before power reaches the window switches, the circuit should be protected from excessive current. What protection device should be connected to the output of the ignition switch?',
+  'breaker:left': 'A circuit breaker protects the circuit from excessive current caused by motor stall or mechanical resistance. Think about where in the current path a circuit breaker should be placed — should it come before or after the ignition switch, and which side of the breaker receives the incoming power?',
+  'breaker:right': 'After the circuit breaker, power needs to reach the window switches. Recall that both the master switch and the passenger switch need power to operate the motors in either direction. How many components should the output side of the circuit breaker connect to?',
+  'masterSwitch:top0': 'The master switch needs a source of power to operate the motors. Think about the path current has taken so far — has it passed through the ignition switch and circuit breaker yet? Which of those protected and switched outputs should supply the master switch?',
+  'masterSwitch:bot0': 'Window motors require both a power path and a ground return path to operate. The master switch controls direction by switching polarity. Does the master switch itself need a ground connection, and if so, which pin provides that ground return?',
+  'masterSwitch:bot1': 'Reversing the polarity across a motor reverses its direction of rotation. The master switch controls the left motor direction by switching which pin receives power and which receives ground. Which pin on the left motor should connect to this output to drive the motor in one direction?',
+  'masterSwitch:bot2': 'To reverse the left window motor, the polarity across it must be reversed. If one output of the master switch connects to one motor pin for the up direction, which pin on the left motor should the opposite output connect to in order to drive it in the down direction?',
+  'masterSwitch:bot3': 'The master switch needs to coordinate with the passenger switch so both switches can control the right motor. Think about how the master switch communicates its position to the passenger switch — which pin on the passenger switch receives this control signal from the master?',
+  'masterSwitch:bot4': 'The passenger switch requires two control signals from the master switch to know which direction to drive the right motor. One signal has already been sent — where should the second control signal from the master switch connect on the passenger switch?',
+  'passengerSwitch:top0': 'The passenger switch receives a control signal from the master switch that tells it which direction the right motor should turn. Which output pin of the master switch sends this first control signal, and which pin on the top of the passenger switch should receive it?',
+  'passengerSwitch:top1': 'A second control signal from the master switch is needed so the passenger switch can determine motor direction. Think about how many signals are needed to communicate two possible directions — where does this second signal arrive on the passenger switch?',
+  'passengerSwitch:top2': 'The passenger switch needs its own source of power to drive the right motor, separate from the control signals it receives from the master switch. Where does power come from earlier in the circuit that has already been switched and protected?',
+  'passengerSwitch:bot0': 'Just like the master switch controls the left motor, the passenger switch controls the right motor by switching polarity. Which pin on the right motor should connect to this output to drive the motor in one direction?',
+  'passengerSwitch:bot1': 'To reverse the right window motor, the polarity must be reversed just as it is on the left motor. If one output drives the motor in the up direction, which pin on the right motor should the other output connect to in order to drive it in the down direction?',
+  'leftMotor:topL': 'Window motors reverse direction when the polarity across them is reversed. The master switch controls this by sending power to one pin and ground to the other. Which output pin of the master switch corresponds to this motor terminal, and what determines which direction the motor will spin?',
+  'leftMotor:topR': 'The left motor has two terminals — one for each direction of rotation. If one terminal is already connected to the master switch, think about what the other terminal needs to connect to so that reversing the switch output will reverse the motor direction.',
+  'rightMotor:topL': 'The right motor works the same way as the left motor — polarity determines direction. The passenger switch controls this motor. Which output pin of the passenger switch should connect to this terminal to drive the motor in one direction?',
+  'rightMotor:topR': 'Just as with the left motor, the right motor needs both of its terminals connected to the passenger switch outputs so that switching polarity will reverse its direction. Which passenger switch output should connect to this terminal?',
+  'ANY_ground': 'Every component that needs a ground return path must connect to chassis ground to complete the circuit. Which component in the circuit still has a pin that has not been connected to a ground reference point?'
+}
+  },
+
+  // ── 1: TRANSISTOR / LED CIRCUIT ─────────────────────────────────────
+  {
+    title: 'Assignment 2 — Transistor / LED Circuit',
+    instructions: `
+      <h3 style="margin-bottom:10px;color:#d4900a;">Assignment 2: Transistor / LED Circuit</h3>
+      <p style="margin-bottom:8px;"><b>Objective:</b> Wire a transistor-controlled LED circuit.</p>
+      <p style="margin-bottom:8px;"><b>Components:</b> Battery, LED, Resistor 1, Resistor 2, Switch, 5V Reference, NPN Transistor, and Ground.</p>
+      <p style="margin-bottom:8px;"><b>Helpful Hints:</b></p>
+      <ol style="margin-left:18px;line-height:1.8;">
+        <li>When a transistor is used as a switch it is typically controlled by a 5 volt source.</li>
+        <li>The transistor is an NPN type transistor. An NPN transistor is typically a Low Side Driver (LSD). A circuit that is controlled by a transistor has two sides. One side of the circuit is used to control the resistor and the other side of the circuit is used to provide a path for the current to flow through. It’s important that each side of the circuit has some type of load device.</li>
+        <li>The switch in this circuit is used to control the operation of the transistor.</li>
+        <li>A light emitting diode (LED) has to face in the correct direction in order for current to flow through it. LEDs only require a small amount of current. A change in the circuit voltage would change the current in the circuit. In order to protect an LED a resistor is placed in the circuit.</li>
+        <li>One of the resistors is used as a load device for the control side of the transistor.</li>
+      </ol>
+      <p style="margin-top:10px;color:#888;font-size:0.82rem;">Click <b>Begin Assignment</b> to start wiring. Click <b>Grade</b> when finished.</p>
+    
+      `,
+    universalGroups: {
+      ground: ['gnd3']
+    },
+    componentDefs: [
+
+      // Battery — pins left (neg) and right (pos), both at vertical midpoint
+      {
+        id:'battery2', label:'Battery', emoji:'🔋',
+        imageSrc:'images/battery.png',
+        x:80, y:280, w:130, h:50,
+        pins:[
+          {id:'neg', label:'Negative (−)', side:'left'},
+          {id:'pos', label:'Positive (+) — Power', side:'right'}
+        ]
+      },
+
+      // LED — top pin (ledinput) centered top, bottom pin (ledoutput) centered bottom
+      {
+        id:'led', label:'LED', emoji:'💡',
+        imageSrc:'images/led.png',
+        x:320, y:100, w:100, h:85,
+        pins:[
+          {id:'ledinput',  label:'LED Input (+)',  side:'top',    index:0, total:1},
+          {id:'ledoutput', label:'LED Output (−)', side:'bottom', index:0, total:1}
+        ]
+      },
+
+      // Resistor 1 — left and right pins at vertical midpoint (horizontal orientation)
+      {
+        id:'resistor1', label:'Resistor 1', emoji:'⬛',
+        imageSrc:'images/resistor1.png',
+        x:480, y:380, w:130, h:60,
+        pins:[
+          {id:'left',  label:'Resistor 1 Left',  side:'left'},
+          {id:'right', label:'Resistor 1 Right', side:'right'}
+        ]
+      },
+
+      // Resistor 2 — top and bottom pins centered (vertical orientation)
+      {
+        id:'resistor2', label:'Resistor 2', emoji:'⬛',
+        imageSrc:'images/resistor2.png',
+        x:320, y:280, w:60, h:85,
+        pins:[
+          {id:'r2input',  label:'Resistor 2 Input (top)',   side:'top',    index:0, total:1},
+          {id:'r2output', label:'Resistor 2 Output (bottom)',side:'bottom', index:0, total:1}
+        ]
+      },
+
+      // Switch — left pin at midpoint, right pin at 3/4 up from bottom
+      // 3/4 up from bottom = 1/4 from top = h*0.25
+      {
+        id:'switch2', label:'Switch', emoji:'🔘',
+        imageSrc:'images/switch.png',
+        x:480, y:220, w:120, h:80,
+        pins:[
+          {id:'switchinput',  label:'Switch Input (left)',  side:'left'},
+          // right pin 3/4 up from bottom: py = h - h*0.75 + 4 = h*0.25 + 4
+          // We use a custom offset via 'custom' flag handled below
+          {id:'switchoutput', label:'Switch Output (right)', side:'right', customY: 0.25}
+        ]
+      },
+
+      // 5V Reference — one pin on the bottom, centered
+      {
+        id:'ref5v', label:'5V Reference', emoji:'⚡',
+        imageSrc:'images/ref5v.png',
+        x:480, y:80, w:130, h:75,
+        pins:[
+          {id:'refout', label:'5V Output', side:'bottom', index:0, total:1}
+        ]
+      },
+
+      // NPN Transistor — left pin (base) at midpoint, top pin (collector) 3/4 from left,
+      // bottom pin (emitter) 3/4 from left
+      {
+        id:'npn', label:'NPN Transistor', emoji:'🔺',
+        imageSrc:'images/npn.png',
+        x:320, y:440, w:100, h:80,
+        pins:[
+          {id:'base',      label:'Base (left)',      side:'left'},
+          // collector: top, 3/4 from left = index position approximated with custom offset
+          {id:'collector', label:'Collector (top)',   side:'top',    index:0, total:1, customX: 0.5},
+          {id:'emitter',   label:'Emitter (bottom)',  side:'bottom', index:0, total:1, customX: 0.5}
+        ]
+      },
+
+      // Ground — one pin on top, centered
+      {
+        id:'gnd3', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:320, y:640, w:100, h:65,
+        pins:[
+          {id:'pin', label:'Ground', side:'top', index:0, total:1}
+        ]
+      }
+    ],
+
+    correctConnections: [
+      // Battery negative → Ground
+      ['battery2','neg',       'ANY_ground','pin'],
+      // Battery positive → LED input
+      ['battery2','pos',       'led','ledinput'],
+      // LED output → Resistor 2 input (top)
+      ['led','ledoutput',      'resistor2','r2input'],
+      // Resistor 2 output (bottom) → NPN Transistor collector (top)
+      ['resistor2','r2output', 'npn','collector'],
+      // 5V Reference → Switch input (left)
+      ['ref5v','refout',       'switch2','switchinput'],
+      // Switch output (right) → Resistor 1 left
+      ['switch2','switchoutput','resistor1','left'],
+      // Resistor 1 right → NPN Transistor base (left)
+      ['resistor1','right',    'npn','base'],
+      // NPN Transistor emitter (bottom) → Ground
+      ['npn','emitter',        'ANY_ground','pin']
+    ],
+
+    connectionFeedback: {
+  'battery2:neg': 'Every circuit needs a complete path for current to flow. Which terminal of the battery establishes the reference point that all grounds in the circuit connect back to?',
+  'battery2:pos': 'The battery positive is the source of current for the load side of this circuit. Which component in this circuit is the load device that requires current to flow through it in one direction only?',
+  'led:ledinput': 'An LED is a diode, meaning current can only flow through it in one direction. Which terminal of the battery would forward-bias the LED so that current can flow through it?',
+  'led:ledoutput': 'After current passes through the LED it must continue through the collector path of the transistor. What device should be placed in series after the LED to protect it by limiting the amount of current in the circuit?',
+  'resistor2:r2input': 'Resistors are used to limit current in a circuit. Which component comes before Resistor 2 in the collector path — the component that only allows current to flow in one direction?',
+  'resistor2:r2output': 'Resistor 2 is in series with the collector path of the transistor. Recall that in an NPN transistor, current flows from collector to emitter. Which pin of the transistor receives current from the collector path?',
+  'ref5v:refout': 'The control side of an NPN transistor is typically driven by a low-voltage reference source. What component in this circuit provides the 5V signal needed to begin the control path?',
+  'switch2:switchinput': 'The switch is used to open and close the control side of the circuit. Think about the flow of the control signal — where does the 5V reference need to go before it reaches the transistor base?',
+  'switch2:switchoutput': 'When the switch is closed, the control signal must pass through a current-limiting device before reaching the transistor base. Too much base current can damage a transistor. What component should be placed between the switch output and the transistor base?',
+  'resistor1:left': 'Resistor 1 is the load device on the control side of the transistor. Recall that an NPN transistor used as a switch has two separate sides — a control side and a load side. Which component on the control side sends its signal into Resistor 1?',
+  'resistor1:right': 'After current passes through Resistor 1, it arrives at the controlling pin of the transistor. Which pin of an NPN transistor receives the small base current that switches the transistor ON and allows the larger collector current to flow?',
+  'npn:base': 'The base is the gate of the transistor — a small current here controls a much larger current on the collector side. Which component should be connected to the base to limit the base current to a safe level?',
+  'npn:collector': 'In an NPN transistor, current enters through the collector and exits through the emitter when the transistor is ON. Which component in the load path should be connected to the collector to complete the upper half of the collector-emitter path?',
+  'npn:emitter': 'Current flows through an NPN transistor from collector to emitter. For this current to complete its path, the emitter must connect to something. What provides the return path for current at the bottom of every circuit?',
+  'ANY_ground': 'Every complete circuit needs a ground reference point. Think about which component in this circuit still has a pin that has not been connected to the common ground return path.'
+},
+  },
+  // ── 2: HORN CIRCUIT ──────────────────────────────────────────────────
+  // Universal components: grounds (gndA/B/C/D), fuses (fuseA/fuseB),
+  // horns (hornA/hornB) — any instance satisfies any role of that type.
+  {
+    title: 'Assignment 3 — Horn Circuit',
+    instructions: `
+      <h3 style="margin-bottom:10px;color:#d4900a;">Assignment 3: Horn Circuit</h3>
+      <p style="margin-bottom:8px;"><b>Objective:</b> Wire a dual-horn circuit controlled by an NPN ECU through a relay.</p>
+      <p style="margin-bottom:8px;"><b>Components:</b> Battery, 2 Fuses, NPN ECU, Clockspring, Horn Switch, Relay, 2 Horns, 4 Grounds.</p>
+      <p style="margin-bottom:8px;"><b>Helpful Hints:</b></p>
+      <ol style="margin-left:18px;line-height:1.8;">
+        <li>The ECU receives an input, makes a decision, and controls an output. The output transistor is an NPN type transistor. The ground connected to the 
+emitter makes it a Low Side Driver (LSD). The circuit that is controlled by this output would have a small amount of current.</li>
+        <li>A relay is a device that can use a small amount of current to control a large amount of current.</li>
+        <li>A circuit protection device is critical in this type of circuit. A fuse can prevent the wiring in the circuit from melting in case the horn was stuck on for a long period of time.</li>
+        <li>The horn switch is typically mounted in the steering wheel. .</li>
+        <li>Most vehicles use two horns in order to distribute and amplify the sound. Both horns are intended to honk at the same time.</li>
+        </ol>
+        <p style="margin-top:10px;color:#888;font-size:0.82rem;">Click <b>Begin Assignment</b> to start wiring. Click <b>Grade</b> when finished.</p>
+    
+      `,
+
+    // universalGroups: grading treats all members of each group as
+    // interchangeable — a student can use any ground for any ground role, etc.
+    universalGroups: {
+      ground: ['gndA','gndB','gndC','gndD'],
+      fuse1:  ['fuseA','fuseB'],   // fuse connecting battery+ to ECU power
+      fuse2:  ['fuseA','fuseB'],   // fuse connecting battery+ to relay 85 & 30
+      horn1:  ['hornA','hornB'],   // first horn in chain (relay pin 87 → horn input)
+      horn2:  ['hornA','hornB']    // second horn in chain (horn1 output → horn2 input → ground)
+    },
+
+    componentDefs: [
+      // Battery — left=neg, right=pos, both at vertical midpoint
+      {
+        id:'battH', label:'Battery', emoji:'🔋',
+        imageSrc:'images/battery.png',
+        x:60, y:320, w:130, h:60,
+        pins:[
+          {id:'neg', label:'Negative (−)', side:'left'},
+          {id:'pos', label:'Positive (+)', side:'right'}
+        ]
+      },
+
+      // Fuse A
+      {
+        id:'fuseA', label:'Fuse', emoji:'⚡',
+        imageSrc:'images/fuse.png',
+        x:280, y:200, w:120, h:60,
+        pins:[
+          {id:'left',  label:'Fuse Left',  side:'left'},
+          {id:'right', label:'Fuse Right', side:'right'}
+        ]
+      },
+
+      // Fuse B
+      {
+        id:'fuseB', label:'Fuse', emoji:'⚡',
+        imageSrc:'images/fuse.png',
+        x:280, y:380, w:120, h:60,
+        pins:[
+          {id:'left',  label:'Fuse Left',  side:'left'},
+          {id:'right', label:'Fuse Right', side:'right'}
+        ]
+      },
+
+      // NPN ECU — 4 pins:
+      //   left  7/8 from top  = customY: 0.875  → ECU power
+      //   right 7/8 from top  = customY: 0.875  → ECU ground
+      //   bottom 1/4 from left = customX: 0.25  → ECU input
+      //   bottom 3/4 from left = customX: 0.75  → ECU output
+      {
+        id:'ecu', label:'NPN ECU', emoji:'🖥',
+        imageSrc:'images/npnecu.png',
+        x:480, y:160, w:180, h:120,
+        pins:[
+          {id:'ecupower',  label:'ECU Power',  side:'left',   customY:0.125},
+          {id:'ecuground', label:'ECU Ground', side:'right',  customY:0.125},
+          {id:'ecuinput',  label:'ECU Input',  side:'bottom', customX:0.25},
+          {id:'ecuoutput', label:'ECU Output', side:'bottom', customX:0.75}
+        ]
+      },
+
+      // Clockspring — top center = clockspring input, bottom center = clockspring output
+      {
+        id:'clockspring', label:'Clock Spring', emoji:'🌀',
+        imageSrc:'images/clockspring.png',
+        x:480, y:440, w:110, h:90,
+        pins:[
+          {id:'csinput',  label:'Clockspring Input',  side:'top',    index:0, total:1},
+          {id:'csoutput', label:'Clockspring Output', side:'bottom', index:0, total:1}
+        ]
+      },
+
+      // Horn Switch — top center = horn input, bottom 7/8 from left = horn output
+      {
+        id:'hornswitch', label:'Horn Switch', emoji:'📯',
+        imageSrc:'images/hornswitch.png',
+        x:480, y:640, w:110, h:85,
+        pins:[
+          {id:'hswinput',  label:'Horn Switch Input',  side:'top',    index:0, total:1},
+          {id:'hswoutput', label:'Horn Switch Output', side:'bottom', customX:0.75}
+        ]
+      },
+
+      // Relay — 5 pins:
+      //   top    1/8 from left = customX:0.125  → pin 86
+      //   top    3/4 from left = customX:0.75   → pin 30
+      //   bottom 1/8 from left = customX:0.125  → pin 85
+      //   bottom 5/8 from left = customX:0.625  → pin 87
+      //   bottom 7/8 from left = customX:0.875  → pin 87A (unconnected)
+      {
+        id:'relay', label:'Relay', emoji:'🔲',
+        imageSrc:'images/relay.png',
+        x:740, y:280, w:200, h:60,
+        pins:[
+          {id:'p86',  label:'Pin 86',  side:'top',    customX:0.125},
+          {id:'p30',  label:'Pin 30',  side:'top',    customX:0.75},
+          {id:'p85',  label:'Pin 85',  side:'bottom', customX:0.125},
+          {id:'p87',  label:'Pin 87',  side:'bottom', customX:0.625},
+          {id:'p87a', label:'Pin 87A (unconnected)', side:'bottom', customX:0.875}
+        ]
+      },
+
+      // Horn A — top center = horn input, bottom center = horn output
+      {
+        id:'hornA', label:'Horn', emoji:'📢',
+        imageSrc:'images/horn.png',
+        x:760, y:500, w:130, h:85,
+        pins:[
+          {id:'hninput',  label:'Horn Input',  side:'top',    index:0, total:1},
+          {id:'hnoutput', label:'Horn Output', side:'bottom', index:0, total:1}
+        ]
+      },
+
+      // Horn B
+      {
+        id:'hornB', label:'Horn', emoji:'📢',
+        imageSrc:'images/horn.png',
+        x:940, y:500, w:130, h:85,
+        pins:[
+          {id:'hninput',  label:'Horn Input',  side:'top',    index:0, total:1},
+          {id:'hnoutput', label:'Horn Output', side:'bottom', index:0, total:1}
+        ]
+      },
+
+      // Ground A
+      {
+        id:'gndA', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:60, y:500, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      },
+      // Ground B
+      {
+        id:'gndB', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:700, y:160, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      },
+      // Ground C
+      {
+        id:'gndC', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:700, y:700, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      },
+      // Ground D
+      {
+        id:'gndD', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:1100, y:660, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      }
+    ],
+
+    // correctConnections uses a special format for universal components:
+    // 'ANY_ground' means any gndA/B/C/D pin satisfies this slot.
+    // 'ANY_fuse1'  means either fuse can be fuse1 (ECU fuse).
+    // 'ANY_fuse2'  means either fuse can be fuse2 (relay fuse).
+    // 'ANY_horn1'  means either horn can be the first horn (relay→horn).
+    // 'ANY_horn2'  means either horn can be the second horn (chained).
+    // These are resolved at grade time by the horn circuit grader.
+    correctConnections: [
+      // Battery neg → any ground
+      ['battH','neg',        'ANY_ground','pin'],
+      // Battery pos → fuse1 left (ECU fuse)
+      ['battH','pos',        'ANY_fuse1','left'],
+      // Fuse1 right → ECU power
+      ['ANY_fuse1','right',  'ecu','ecupower'],
+      // Battery pos → fuse2 left (relay fuse) — same battery pos
+      ['battH','pos',        'ANY_fuse2','left'],
+      // Fuse2 right → relay pin 85
+      ['ANY_fuse2','right',  'relay','p85'],
+      // Fuse2 right → relay pin 30 (same fuse as pin 85)
+      ['ANY_fuse2','right',  'relay','p30'],
+      // ECU ground → any ground
+      ['ecu','ecuground',    'ANY_ground','pin'],
+      // ECU input → clockspring input
+      ['ecu','ecuinput',     'clockspring','csinput'],
+      // ECU output → relay pin 86
+      ['ecu','ecuoutput',    'relay','p86'],
+      // Clockspring output → horn switch input
+      ['clockspring','csoutput','hornswitch','hswinput'],
+      // Horn switch output → any ground
+      ['hornswitch','hswoutput','ANY_ground','pin'],
+      // Relay pin 87 → horn1 input
+      ['relay','p87',        'ANY_horn1','hninput'],
+      // Horn1 output → horn2 input
+      ['ANY_horn1','hnoutput','ANY_horn2','hninput'],
+      // Horn2 output → any ground
+      ['ANY_horn2','hnoutput','ANY_ground','pin']
+    ],
+
+    connectionFeedback: {
+  'battH:neg': 'Every circuit needs a complete current path back to its source. The battery negative establishes the ground reference for the entire system. Which symbol on the diagram represents the chassis ground that the battery negative must return to?',
+  'battH:pos': 'Battery positive is the source of power for this entire circuit. Think about how many separate circuits branch off from the battery in this diagram — the ECU needs protected power and so does the relay. How many fuses should connect directly to the battery positive, and what does each one protect?',
+  'ecu:ecupower': 'The ECU is an electronic control module that requires a stable, protected power supply to operate. Think about what device is used to protect a circuit from excessive current — should the ECU receive power directly from the battery, or should something be placed between the battery and the ECU power pin?',
+  'ecu:ecuground': 'Electronic control modules require both a power supply and a ground reference to operate. Without a ground connection, current cannot flow through the ECU. Which terminal of the ECU provides the ground return path, and what does it need to connect to?',
+  'ecu:ecuinput': 'The ECU is programmed to monitor an input signal and make a decision based on it. In this circuit, the driver presses a button to request the horn. Think about how that signal travels from the steering wheel to the ECU — what device maintains a continuous electrical connection between the rotating steering wheel and the stationary wiring harness?',
+  'ecu:ecuoutput': 'When the ECU determines that the horn should sound, it uses its output transistor to control a device that can handle the high current the horns require. The ECU output is a Low Side Driver — it provides a ground path when activated. Which pin on the relay does a Low Side Driver output connect to in order to energize the relay coil?',
+  'clockspring:csinput': 'The clockspring maintains an electrical connection through the steering column as the wheel rotates. Think about the direction the horn request signal travels — it starts at the ECU and must reach the steering wheel. Which end of the clockspring receives the incoming signal from the ECU?',
+  'clockspring:csoutput': 'After the signal passes through the clockspring it must reach the component the driver physically presses to activate the horn. Think about where the horn switch is located and which end of the clockspring should send the signal toward it.',
+  'hornswitch:hswinput': 'The horn switch is a normally open switch — pressing it closes the circuit. Think about the signal path from the ECU through the clockspring. Which component delivers the signal to the horn switch input, and which end of the clockspring connects to it?',
+  'hornswitch:hswoutput': 'The horn switch completes a ground path when it is pressed. Recall that the ECU output is a Low Side Driver — it controls the circuit by providing ground. When the driver presses the horn switch, what does the output side of the switch need to connect to in order to complete this ground path back to the ECU?',
+  'relay:p86': 'A relay coil has two terminals — one positive and one negative — just like any electromagnetic coil. Pin 86 is the positive side of the relay coil. Think about what signal energizes the coil to close the relay contacts — which output of the ECU provides this trigger signal?',
+  'relay:p85': 'Pin 85 is the negative side of the relay coil and must be connected to complete the coil circuit. Recall that in this circuit the relay coil power comes through a fuse from the battery. Which terminal of the relay coil connects to the fuse to complete the coil power supply path?',
+  'relay:p30': 'Pin 30 is the common terminal of the relay — think of it as the input that feeds power to the horns when the relay closes. This pin needs a protected power supply capable of handling horn current. Which device between the battery and the relay ensures this power path is protected from overcurrent?',
+  'relay:p87': 'When the relay coil is energized, the normally-open contacts close and allow current to flow from pin 30 to pin 87. Pin 87 is the switched output that powers the horn circuit. Two horns need to sound simultaneously — how should they be connected so that both receive power when the relay closes?',
+  'relay:p87a': 'Pin 87A is the normally-closed contact of the relay — meaning it is connected when the relay coil is NOT energized and disconnects when it IS energized. Think carefully about what would happen if a load were connected to pin 87A in this circuit — would it be on or off when the horn is not being pressed?',
+  'ANY_fuse1': 'Circuit protection devices should be placed as close to the power source as possible. One fuse in this circuit is responsible for protecting the ECU power supply. Think about what would happen if the ECU developed an internal fault — which fuse position protects the wiring between the battery and the ECU?',
+  'ANY_fuse2': 'A second fuse is needed to protect the high-current horn circuit. This fuse supplies power to two pins on the relay — the coil side and the contact side. Think about why both of these relay pins need to connect through the same fuse and what that fuse is protecting the circuit from.',
+  'ANY_horn1': 'The relay closes and sends power through pin 87 to the horns. Both horns are designed to sound at the same time. Think about how two horns can be connected so that both receive power from a single relay output — does power go to both horns simultaneously from pin 87, or does it pass through one horn before reaching the other?',
+  'ANY_horn2': 'Two horns need to operate together to produce the correct sound. Think about the path current takes after leaving the first horn — where does it go next before returning to ground? How are the two horns connected relative to each other in this circuit?',
+  'ANY_ground': 'Every branch of a circuit must have a return path to ground for current to flow. Look at each component in the circuit that has not yet been grounded — which one still has a pin that needs a chassis ground connection to complete its current path?'
+}
+  },
+  // ── 3: RADIATOR COOLING FAN CIRCUIT ─────────────────────────────────
+  {
+    title: 'Assignment 4 — Radiator Cooling Fan Circuit',
+    instructions: `
+      <h3 style="margin-bottom:10px;color:#d4900a;">Assignment 4: Radiator Cooling Fan Circuit</h3>
+      <p style="margin-bottom:8px;"><b>Objective:</b> Wire a temperature-controlled radiator fan circuit using a PNP ECU, thermistor, and relay.</p>
+      <p style="margin-bottom:8px;"><b>Components:</b> Battery, 2 Fuses, PNP ECU, Thermistor, Relay, Cooling Fan Motor, 4 Grounds.</p>
+      <p style="margin-bottom:8px;"><b>Helpful Hints:</b></p>
+      <ol style="margin-left:18px;line-height:1.8;">
+        <li>The ECU receives an input, makes a decision, and controls an output. The output transistor is an PNP type transistor. The power connected to the emitter makes it a High Side Driver (LSD). The circuit that is controlled by this output would have a small amount of current.</li>
+        <li>A circuit protection device is critical in this type of circuit. A fuse can prevent the wiring in the circuit from melting in case the cooling fan has a mechanical failure and increases the circuit current.</li>
+        <li>A relay is a device that can use a small amount of current to control a large amount of current.</li>
+        <li>A thermistor is a device that changes resistance based on temperature. The thermistor would help to determine the temperature of coolant.</li>
+        <li>This radiator cooling fan motor turns on when the processor of the ECU determines that the temperature of the coolant is too high.</li>
+        </ol>
+      <p style="margin-top:10px;color:#888;font-size:0.82rem;">The thermistor resistance changes with temperature — the ECU monitors this and triggers the relay to run the fan when the engine is hot.</p>
+    `,
+    // Universal groups: both fuses connect battery(+) on left;
+    // right side goes to ECU power OR relay pin 30 — either fuse can fill either role.
+    // All four grounds are interchangeable.
+    universalGroups: {
+      ground: ['cgndA','cgndB','cgndC','cgndD'],
+      fuseEcu:   ['cfuseA','cfuseB'],  // fuse whose right goes to ECU power
+      fuseRelay: ['cfuseA','cfuseB'],  // fuse whose right goes to relay pin 30
+    },
+
+    componentDefs: [
+
+      // Battery — left=neg, right=pos
+      {
+        id:'battC', label:'Battery', emoji:'🔋',
+        imageSrc:'images/battery.png',
+        x:60, y:340, w:130, h:60,
+        pins:[
+          {id:'neg', label:'Negative (−)', side:'left'},
+          {id:'pos', label:'Positive (+)', side:'right'}
+        ]
+      },
+
+      // Fuse A
+      {
+        id:'cfuseA', label:'Fuse', emoji:'⚡',
+        imageSrc:'images/fuse.png',
+        x:280, y:220, w:120, h:60,
+        pins:[
+          {id:'left',  label:'Fuse Left',  side:'left'},
+          {id:'right', label:'Fuse Right', side:'right'}
+        ]
+      },
+
+      // Fuse B
+      {
+        id:'cfuseB', label:'Fuse', emoji:'⚡',
+        imageSrc:'images/fuse.png',
+        x:280, y:400, w:120, h:60,
+        pins:[
+          {id:'left',  label:'Fuse Left',  side:'left'},
+          {id:'right', label:'Fuse Right', side:'right'}
+        ]
+      },
+
+      // PNP ECU — 5 pins:
+      //   left  7/8 from bottom = customY:0.125  → ECU Power
+      //   left  halfway         = customY:0.5    → Sensor Ground
+      //   right 7/8 from bottom = customY:0.125  → ECU Ground
+      //   bottom 1/4 from left  = customX:0.25   → ECU Input  (→ thermistor input)
+      //   bottom 3/4 from left  = customX:0.75   → ECU Output (→ relay pin 86)
+      {
+        id:'ecuC', label:'PNP ECU', emoji:'🖥',
+        imageSrc:'images/pnpecu.png',
+        x:500, y:160, w:190, h:120,
+        pins:[
+          {id:'ecupower',    label:'ECU Power',     side:'left',   customY:0.125},
+          {id:'sensorgnd',   label:'Sensor Ground', side:'left',   customY:0.5},
+          {id:'ecuground',   label:'ECU Ground',    side:'right',  customY:0.125},
+          {id:'ecuinput',    label:'ECU Input',     side:'bottom', customX:0.25},
+          {id:'ecuoutput',   label:'ECU Output',    side:'bottom', customX:0.75}
+        ]
+      },
+
+      // Thermistor — input on RIGHT (halfway), output on LEFT (halfway)
+      {
+        id:'thermistor', label:'Thermistor', emoji:'🌡',
+        imageSrc:'images/thermistor.png',
+        x:500, y:420, w:150, h:85,
+        pins:[
+          {id:'thinput',  label:'Thermistor Input',  side:'right'},
+          {id:'thoutput', label:'Thermistor Output', side:'left'}
+        ]
+      },
+
+      // Relay — same 5-pin layout as horn circuit relay
+      //   top    1/8 from left = customX:0.125  → pin 86
+      //   top    3/4 from left = customX:0.75   → pin 30
+      //   bottom 1/8 from left = customX:0.125  → pin 85
+      //   bottom 5/8 from left = customX:0.625  → pin 87
+      //   bottom 7/8 from left = customX:0.875  → pin 87A (unconnected)
+      {
+        id:'relayC', label:'Relay', emoji:'🔲',
+        imageSrc:'images/relay.png',
+        x:780, y:240, w:200, h:60,
+        pins:[
+          {id:'p86',  label:'Pin 86',  side:'top',    customX:0.125},
+          {id:'p30',  label:'Pin 30',  side:'top',    customX:0.75},
+          {id:'p85',  label:'Pin 85',  side:'bottom', customX:0.125},
+          {id:'p87',  label:'Pin 87',  side:'bottom', customX:0.625},
+          {id:'p87a', label:'Pin 87A (unconnected)', side:'bottom', customX:0.875}
+        ]
+      },
+
+      // Cooling Fan Motor — top center input, bottom center output
+      {
+        id:'fanMotor', label:'Cooling Fan Motor', emoji:'💨',
+        imageSrc:'images/fanmotor.png',
+        x:820, y:480, w:60, h:90,
+        pins:[
+          {id:'fanin',  label:'Radiator Cooling Fan Motor Input',  side:'top',    index:0, total:1},
+          {id:'fanout', label:'Radiator Cooling Fan Motor Output', side:'bottom', index:0, total:1}
+        ]
+      },
+
+      // Four universal grounds
+      {
+        id:'cgndA', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:50, y:520, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      },
+      {
+        id:'cgndB', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:720, y:160, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      },
+      {
+        id:'cgndC', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:720, y:430, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      },
+      {
+        id:'cgndD', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:1020, y:640, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      }
+    ],
+
+    correctConnections: [
+      // Battery neg → any ground
+      ['battC','neg',          'ANY_ground','pin'],
+      // Battery pos → fuse-ECU left
+      ['battC','pos',          'ANY_fuseEcu','left'],
+      // Fuse-ECU right → ECU power
+      ['ANY_fuseEcu','right',  'ecuC','ecupower'],
+      // Battery pos → fuse-Relay left
+      ['battC','pos',          'ANY_fuseRelay','left'],
+      // Fuse-Relay right → relay pin 30
+      ['ANY_fuseRelay','right','relayC','p30'],
+      // ECU ground → any ground
+      ['ecuC','ecuground',     'ANY_ground','pin'],
+      // ECU input (bottom-left) → thermistor input (right pin)
+      ['ecuC','ecuinput',      'thermistor','thinput'],
+      // Thermistor output (left pin) → ECU sensor ground (left, midpoint)
+      ['thermistor','thoutput','ecuC','sensorgnd'],
+      // ECU output → relay pin 86
+      ['ecuC','ecuoutput',     'relayC','p86'],
+      // Relay pin 85 → any ground
+      ['relayC','p85',         'ANY_ground','pin'],
+      // Relay pin 87 → fan motor input
+      ['relayC','p87',         'fanMotor','fanin'],
+      // Fan motor output → any ground
+      ['fanMotor','fanout',    'ANY_ground','pin']
+    ],
+
+    connectionFeedback: {
+  'battC:neg': 'Every circuit requires a complete path for current to flow from the source and back again. The battery negative establishes the ground reference for the entire system. Which symbol on the diagram represents the chassis ground that the battery negative must return to in order to complete the main circuit path?',
+  'battC:pos': 'Battery positive is the source of power for this entire cooling fan system. Think about how many separate circuits branch off from the battery — the ECU needs its own protected supply and so does the fan motor through the relay. How many fuses should connect directly to battery positive, and what is each one responsible for protecting?',
+  'ecuC:ecupower': 'The PNP ECU is an electronic control module that requires a stable and protected power supply to function correctly. Think about what happens to the wiring if the ECU develops an internal fault and draws excessive current — what device should be placed between the battery and the ECU power pin to prevent damage to the circuit?',
+  'ecuC:ecuground': 'Electronic control modules require both a power supply and a ground reference to operate. Without a complete ground connection, current cannot flow through the ECU and the module will not function. Which pin on the ECU provides the main power return path, and what does it need to connect to so that the ECU power circuit is complete?',
+  'ecuC:ecuinput': 'The PNP ECU monitors engine coolant temperature by sending a reference signal to a sensor and reading how that signal changes. Think about what type of sensor changes its resistance based on temperature — which component in this circuit does the ECU input pin need to connect to in order to monitor coolant temperature?',
+  'ecuC:sensorgnd': 'Sensor ground is a dedicated low-noise ground reference used specifically for sensor signals — it is kept separate from the main power ground to prevent electrical interference from affecting sensor readings. Think about where the temperature signal returns after passing through the thermistor — which ECU pin provides this dedicated sensor return path?',
+  'ecuC:ecuoutput': 'When the ECU processor determines that coolant temperature has exceeded the threshold, its PNP output transistor activates to control the fan relay. A PNP transistor is a High Side Driver — it switches power rather than ground. Which pin on the relay coil receives a signal from a High Side Driver to energize the coil and close the relay contacts?',
+  'thermistor:thinput': 'A thermistor is a resistive sensor whose resistance changes with temperature — as temperature increases, resistance changes and so does the voltage signal the ECU reads. Think about the direction the reference signal travels from the ECU — which side of the thermistor receives the incoming reference signal from the ECU input pin?',
+  'thermistor:thoutput': 'After the reference signal passes through the thermistor, its voltage level has been modified by the thermistor\'s resistance — which changes based on coolant temperature. This modified signal must return to the ECU so it can be interpreted. Which dedicated ECU pin is designed to receive low-level sensor return signals without interference from the main power ground?',
+  'relayC:p86': 'A relay coil has two terminals that must both be connected for the coil to energize and close the relay contacts. Pin 86 is the coil terminal that receives the trigger signal. Think about what type of driver the ECU output is — does a High Side Driver provide power or ground to trigger the coil, and which relay coil terminal should receive this signal?',
+  'relayC:p30': 'Pin 30 is the common input of the relay — it is the terminal that feeds power through to the load when the relay closes. The cooling fan motor requires a high-current protected power supply. Think about where in the circuit a fuse has been placed to protect this high-current path — which component supplies protected battery power to pin 30?',
+  'relayC:p85': 'Pin 85 is the negative side of the relay coil and must be connected to complete the coil circuit so the relay can energize. Think about what the negative side of any coil or electromagnetic device needs to connect to — without this connection, can current flow through the relay coil to generate the magnetic field that closes the contacts?',
+  'relayC:p87': 'Pin 87 is the normally-open output of the relay — it is disconnected when the relay is off and connects to pin 30 when the relay energizes. Think about what component needs to receive switched power when the coolant temperature is too high — which device in this circuit is the load that pin 87 should supply power to?',
+  'relayC:p87a': 'Pin 87A is the normally-closed contact of the relay — meaning it is connected when the relay coil is NOT energized and disconnects when it IS energized. Think carefully about what this means for this circuit — if a load were connected to pin 87A, would the cooling fan run when the engine is cool or when it is hot? Is that the intended behavior for this circuit?',
+  'fanMotor:fanin': 'The cooling fan motor is the final load device in this circuit — it is what actually moves the air across the radiator. Think about the path switched power takes after the relay closes — which relay output pin delivers power to the motor, and which terminal of the motor should receive this switched power supply?',
+  'fanMotor:fanout': 'Like all electric motors, the cooling fan motor requires both a power input and a ground return path to operate. Current must be able to flow completely through the motor and return to the source. What does the output terminal of the fan motor need to connect to so that the motor circuit is complete and current can flow?',
+  'ANY_fuseEcu': 'Fuses are placed as close to the power source as possible to protect the wiring between the battery and the component they serve. One fuse in this circuit is dedicated to protecting the ECU power supply path. Think about what would happen to the wiring if the ECU had an internal fault — which fuse position protects that section of the circuit?',
+  'ANY_fuseRelay': 'A second fuse is needed to protect the high-current path that powers the cooling fan motor through the relay. This fuse connects battery positive to the relay and must be rated for the current the fan motor draws. Think about which relay pin receives this protected battery power supply and why a separate fuse is needed for this path rather than sharing the ECU fuse.',
+  'ANY_ground': 'Every branch of a circuit must have a complete return path to ground for current to flow. Look carefully at each component in the circuit — which one still has a pin that has not been connected to a chassis ground reference point to complete its current path?'
+}
+  },
+  // ── 4: AIRBAG CIRCUIT ────────────────────────────────────────────────
+  {
+    title: 'Assignment 5 — Airbag Circuit',
+    instructions: `
+      <h3 style="margin-bottom:10px;color:#d4900a;">Assignment 5: Airbag Circuit</h3>
+      <p style="margin-bottom:8px;"><b>Objective:</b> Wire a complete airbag system including driver and passenger ignitors, dual clockspring, and impact sensors.</p>
+      <p style="margin-bottom:8px;"><b>Components:</b> Battery, Fuse, Airbag Module, Driver's Ignitor, Passenger's Ignitor, Dual Clockspring, Driver's Impact Sensor, Passenger's Impact Sensor, 2 Grounds.</p>
+      <p style="margin-bottom:8px;"><b>Helpful Hints:</b></p>
+      <ol style="margin-left:18px;line-height:1.8;">
+        <li>The Air Bag Module receives an input, makes a decision, and controls an output. This module uses a 5-volt reference with a pull-down resistor in order to determine the state of its input devices.</li>
+        <li>In order to maintain an electrical connection to the steering wheel components a clock spring is used.</li>
+        <li>Air bags use some type of igniter in order to initiate the rapid inflation of the air bag.</li>
+        <li>An impact sensor is used to identify an impact with the vehicle. Nearly all air bag components use shorting bars to prevent accidental deployment of the air bags.</li>
+        </ol>
+      <p style="margin-top:10px;color:#888;font-size:0.82rem;"><b>⚠ Safety Note:</b> In a real vehicle, always disable the airbag system before working on it. Never apply voltage to ignitor squibs outside of a controlled deployment.</p>
+    `,
+    universalGroups: {
+      ground: ['agnd1','agnd2']
+    },
+    componentDefs: [
+
+      // Battery — left=neg, right=pos
+      {
+        id:'battA', label:'Battery', emoji:'🔋',
+        imageSrc:'images/battery.png',
+        x:60, y:360, w:130, h:60,
+        pins:[
+          {id:'neg', label:'Negative (−)', side:'left'},
+          {id:'pos', label:'Positive (+)', side:'right'}
+        ]
+      },
+
+      // Fuse — left and right, halfway vertically
+      {
+        id:'fuseA2', label:'Fuse', emoji:'⚡',
+        imageSrc:'images/fuse.png',
+        x:280, y:360, w:120, h:60,
+        pins:[
+          {id:'left',  label:'Fuse Left',  side:'left'},
+          {id:'right', label:'Fuse Right', side:'right'}
+        ]
+      },
+
+      // Airbag Module — 10 pins
+      // Top center: ECU Power
+      // Bottom center: ECU Ground
+      // Left side (customY as fraction from top; X from bottom = 1-X from top):
+      //   driver airbag feed:    7/8 from bottom = 1/8 from top → customY:0.125
+      //   driver airbag return:  3/4 from bottom = 1/4 from top → customY:0.25
+      //   passenger airbag feed: 1/4 from bottom = 3/4 from top → customY:0.75
+      //   passenger airbag return:1/8 from bottom= 7/8 from top → customY:0.875
+      // Right side (same logic):
+      //   driver reference:  7/8 from bottom = 1/8 from top → customY:0.125
+      //   driver sense:      3/4 from bottom = 1/4 from top → customY:0.25
+      //   passenger reference:1/4 from bottom= 3/4 from top → customY:0.75
+      //   passenger sense:   1/8 from bottom = 7/8 from top → customY:0.875
+      {
+        id:'airbagModule', label:'Airbag Module', emoji:'🛡',
+        imageSrc:'images/airbagmodule.png',
+        x:460, y:140, w:200, h:120,
+        pins:[
+          // Top center
+          {id:'ecupower',     label:'ECU Power',              side:'top',    index:0, total:1},
+          // Bottom center
+          {id:'ecuground',    label:'ECU Ground',             side:'bottom', index:0, total:1},
+          // Left side — from bottom
+          {id:'driverfeed',   label:'Driver Airbag Feed',     side:'left',   customY:0.125},
+          {id:'driverreturn', label:'Driver Airbag Return',   side:'left',   customY:0.375},
+          {id:'passfeed',     label:'Passenger Airbag Feed',  side:'left',   customY:0.625},
+          {id:'passreturn',   label:'Passenger Airbag Return',side:'left',   customY:0.875},
+          // Right side — from bottom
+          {id:'driverref',    label:'Driver Reference',       side:'right',  customY:0.125},
+          {id:'driversense',  label:'Driver Sense',           side:'right',  customY:0.375},
+          {id:'passref',      label:'Passenger Reference',    side:'right',  customY:0.625},
+          {id:'passsense',    label:'Passenger Sense',        side:'right',  customY:0.875}
+        ]
+      },
+
+      // Driver's Side Ignitor — two pins on the right
+      //   Pin 1: right, 3/4 from bottom = 1/4 from top → customY:0.25
+      //   Pin 2: right, 1/4 from bottom = 3/4 from top → customY:0.75
+      {
+        id:'driverIgnitor', label:"Driver's Ignitor", emoji:'💥',
+        imageSrc:'images/driverignitor.png',
+        x:200, y:180, w:60, h:100,
+        pins:[
+          {id:'pin1', label:'Pin 1', side:'right', customY:0.25},
+          {id:'pin2', label:'Pin 2', side:'right', customY:0.75}
+        ]
+      },
+
+      // Passenger's Side Ignitor — two pins on the right
+      {
+        id:'passIgnitor', label:"Passenger's Ignitor", emoji:'💥',
+        imageSrc:'images/passignitor.png',
+        x:200, y:400, w:60, h:100,
+        pins:[
+          {id:'pin1', label:'Pin 1', side:'right', customY:0.25},
+          {id:'pin2', label:'Pin 2', side:'right', customY:0.75}
+        ]
+      },
+
+      // Dual Clockspring — 4 pins
+      //   Left  3/4 from bottom = 1/4 from top → customY:0.25  Pin 1
+      //   Left  1/4 from bottom = 3/4 from top → customY:0.75  Pin 2
+      //   Right 3/4 from bottom = 1/4 from top → customY:0.25  Pin 3
+      //   Bottom center → Pin 4
+      {
+        id:'clockspringD', label:'Dual Clockspring', emoji:'🌀',
+        imageSrc:'images/dualclockspring.png',
+        x:200, y:280, w:60, h:110,
+        pins:[
+          {id:'cs1', label:'Pin 1', side:'left',   customY:0.25},
+          {id:'cs2', label:'Pin 2', side:'left',   customY:0.75},
+          {id:'cs3', label:'Pin 3', side:'right',  customY:0.25},
+          {id:'cs4', label:'Pin 4', side:'right',  customY:0.75}
+        ]
+      },
+
+      // Driver's Impact Sensor — two pins on the left
+      //   Sensor Reference: left, 7/8 from bottom = 1/8 from top → customY:0.125
+      //   Sensor Return:    left, 1/4 from bottom = 3/4 from top → customY:0.75
+      {
+        id:'driverSensor', label:"Driver's Impact Sensor", emoji:'📡',
+        imageSrc:'images/driversensor.png',
+        x:760, y:160, w:140, h:100,
+        pins:[
+          {id:'sensorref',    label:'Sensor Reference', side:'left', customY:0.125},
+          {id:'sensorreturn', label:'Sensor Return',    side:'left', customY:0.75}
+        ]
+      },
+
+      // Passenger's Impact Sensor — two pins on the left
+      {
+        id:'passSensor', label:"Passenger's Impact Sensor", emoji:'📡',
+        imageSrc:'images/passsensor.png',
+        x:760, y:360, w:140, h:100,
+        pins:[
+          {id:'sensorref',    label:'Sensor Reference', side:'left', customY:0.125},
+          {id:'sensorreturn', label:'Sensor Return',    side:'left', customY:0.75}
+        ]
+      },
+
+      // Ground 1
+      {
+        id:'agnd1', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:60, y:540, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      },
+      // Ground 2
+      {
+        id:'agnd2', label:'Ground', emoji:'⏚',
+        imageSrc:'images/gnd1.png',
+        x:560, y:560, w:100, h:65,
+        pins:[{id:'pin', label:'Ground', side:'top', index:0, total:1}]
+      }
+    ],
+
+    correctConnections: [
+      ['battA','neg',              'ANY_ground','pin'],
+      ['battA','pos',              'fuseA2','left'],
+      ['fuseA2','right',           'airbagModule','ecupower'],
+      ['airbagModule','ecuground', 'ANY_ground','pin'],
+      ['airbagModule','passreturn','passIgnitor','pin2'],
+      ['airbagModule','passfeed',  'passIgnitor','pin1'],
+      ['airbagModule','driverreturn','clockspringD','cs4'],
+      ['airbagModule','driverfeed',  'clockspringD','cs3'],
+      ['driverIgnitor','pin1','clockspringD','cs1'],
+      ['driverIgnitor','pin2','clockspringD','cs2'],
+      ['driverSensor','sensorref',   'airbagModule','driverref'],
+      ['driverSensor','sensorreturn','airbagModule','driversense'],
+      ['passSensor','sensorref',   'airbagModule','passref'],
+      ['passSensor','sensorreturn','airbagModule','passsense']
+    ],
+
+    connectionFeedback: {
+  'battA:neg': 'Every circuit requires a complete path for current to flow from the source and back again. The battery negative establishes the ground reference for the entire airbag system. Which symbol on the diagram represents the chassis ground that the battery negative must connect to in order to complete the main circuit path?',
+  'battA:pos': 'Battery positive is the source of power for the airbag control module. Airbag systems are safety-critical circuits that must be protected from excessive current. Think about what device should always be placed between the battery and any electronic control module — does the battery positive connect directly to the airbag module, or should something be placed in between to protect it?',
+  'fuseA2:left': 'Fuses are placed as close to the power source as possible so that the wiring between the battery and the protected component is covered. Think about which side of the fuse faces toward the battery — which terminal of the fuse should connect to battery positive so that the fuse can interrupt current before it reaches the airbag module?',
+  'fuseA2:right': 'After current passes safely through the fuse it must reach the airbag control module. Think about what the fuse output side delivers — protected battery voltage that is now limited to a safe current level. Which pin on the airbag module is designed to receive this incoming power supply?',
+  'airbagModule:ecupower': 'The airbag control module is an electronic control unit that requires a stable protected power supply to monitor sensors and control airbag deployment. Think about the path power takes from the battery to the module — should the airbag module receive power directly from the battery, or should a protection device be placed in the path first?',
+  'airbagModule:ecuground': 'Electronic control modules require both a power supply and a ground reference to operate. Without a complete ground connection the airbag module cannot function and the system will not be operational. Which pin on the airbag module provides the power return path, and what does it need to connect to so that the module power circuit is complete?',
+  'airbagModule:passreturn': 'Airbag ignitors — also called squibs — are small pyrotechnic devices that require current to flow through them in order to fire and inflate the airbag. A squib circuit needs both a feed and a return path. Think about which two pins on the airbag module control the passenger squib — which one provides the return path to complete the firing circuit through the passenger ignitor?',
+  'airbagModule:passfeed': 'The passenger airbag squib requires current to flow through it to initiate deployment. The airbag module controls this by completing the circuit through the ignitor. Think about which terminal of the passenger ignitor receives the firing current from the module — does the feed connect to pin 1 or pin 2 of the passenger ignitor?',
+  'airbagModule:driverreturn': 'The driver airbag ignitor is located in the steering wheel, which rotates. A special device is needed to maintain a continuous electrical connection between the rotating steering wheel and the stationary wiring harness. Think about which component in this circuit serves that purpose — and which of its pins should receive the driver airbag return signal from the module?',
+  'airbagModule:driverfeed': 'Like the passenger side, the driver airbag squib needs both a feed and a return path. However, unlike the passenger ignitor which connects directly to the module, the driver ignitor is inside the steering wheel. Which component maintains the electrical connection through the steering column, and which of its pins should receive the driver airbag feed signal?',
+  'airbagModule:driverref': 'Impact sensors use a reference signal sent by the airbag module to monitor their status. The module sends a low-level voltage through the reference pin and reads how it changes to determine if the sensor has detected an impact. Think about which pin on the driver impact sensor is designed to receive this incoming reference signal from the module.',
+  'airbagModule:driversense': 'After the reference signal passes through the driver impact sensor, a modified signal returns to the airbag module so it can determine whether an impact has occurred. Think about the direction this return signal travels — which pin on the airbag module is designed to read the returning signal from the driver impact sensor?',
+  'airbagModule:passref': 'Just as the driver impact sensor receives a reference signal from the airbag module, the passenger impact sensor works the same way. The module monitors both sides of the vehicle simultaneously. Think about which pin on the passenger impact sensor receives the incoming reference signal — and which module pin sends it?',
+  'airbagModule:passsense': 'The passenger impact sensor returns a modified signal back to the airbag module after the reference signal passes through it. Think about the path the return signal takes from the sensor back to the module — which dedicated sense pin on the module is designed to receive the returning signal from the passenger side sensor?',
+  'driverIgnitor:pin1': 'The driver airbag ignitor is mounted in the steering wheel and cannot connect directly to the airbag module because the steering wheel rotates. Think about which component in this circuit maintains a continuous electrical connection through the rotating steering column — and which of its pins connects to pin 1 of the driver ignitor on the steering wheel side?',
+  'driverIgnitor:pin2': 'The driver squib circuit requires current to flow through both pins of the ignitor to complete the firing circuit. Pin 2 is the second terminal of the driver ignitor and also connects through the clockspring back to the airbag module. Think about which clockspring pin is on the steering wheel side and connects to ignitor pin 2 to complete the return path of the squib circuit.',
+  'passIgnitor:pin1': 'The passenger ignitor connects directly to the airbag module because it is not located in a rotating component. Think about the two pins the airbag module uses to control the passenger squib — one provides the feed current and one provides the return path. Which module pin sends the firing current that enters pin 1 of the passenger ignitor?',
+  'passIgnitor:pin2': 'The passenger squib circuit needs both a feed and a return path for current to flow through the ignitor. Pin 2 is the second terminal of the passenger ignitor and completes the squib circuit back to the airbag module. Think about which module pin provides the return path — is it the passenger airbag feed or the passenger airbag return that connects to pin 2?',
+  'clockspringD:cs1': 'The clockspring has pins on both the steering wheel side and the steering column side — it acts as a bridge between the rotating steering wheel and the stationary wiring harness. Think about which side of the clockspring faces the driver ignitor — and which clockspring pin on that side connects to the ignitor to carry the airbag feed signal through the steering column?',
+  'clockspringD:cs2': 'The clockspring carries two signals for the driver airbag circuit — one feed and one return — so that current can flow through the ignitor squib in both directions if needed. Think about which clockspring pin on the steering wheel side connects to ignitor pin 2 to carry the return signal back through the steering column to the airbag module?',
+  'clockspringD:cs3': 'The clockspring connects the rotating steering wheel to the stationary airbag module. On the steering column side, two pins connect back to the airbag module. Think about which module pin controls the driver airbag feed — and which clockspring pin on the column side should connect to it to carry that feed signal into the steering column toward the ignitor?',
+  'clockspringD:cs4': 'The clockspring needs two connections on the steering column side to complete the driver airbag circuit — one for the feed and one for the return. Think about which module pin provides the driver airbag return path — and which clockspring pin on the column side should connect to it to carry the return signal back from the steering wheel?',
+  'driverSensor:sensorref': 'The driver impact sensor uses a reference signal from the airbag module to report its status. Think about the direction this reference signal travels — it originates at the airbag module and must arrive at the sensor. Which pin on the driver impact sensor is designed to receive this incoming reference signal, and which module pin sends it?',
+  'driverSensor:sensorreturn': 'After the reference signal enters the driver impact sensor through the reference pin, a modified return signal must travel back to the airbag module. Think about the direction the return signal travels — it leaves the sensor and must arrive at the correct module pin. Which pin on the driver sensor carries this return signal, and which dedicated sense pin on the module is it designed to connect to?',
+  'passSensor:sensorref': 'The passenger impact sensor operates the same way as the driver impact sensor — the airbag module sends it a reference signal and monitors how it changes. Think about which pin on the passenger sensor is designed to receive the incoming reference signal from the module, and which module pin dedicated to the passenger side sends this signal.',
+  'passSensor:sensorreturn': 'Just as the driver sensor return signal travels back to the driver sense pin on the module, the passenger sensor return signal must travel back to its corresponding sense pin. Think about the path the return signal takes from the passenger sensor back to the module — which pin on the passenger sensor carries this return signal, and which dedicated passenger sense pin on the module receives it?',
+  'ANY_ground': 'Every branch of a circuit must have a complete return path to ground for current to flow. Look carefully at each component in the circuit that has not yet been fully connected — which one still has a pin that needs a chassis ground connection to complete its current path and allow the circuit to function?'
+}
+  },
+  { title:'Assignment 6 — Circuit 6',           componentDefs:[], correctConnections:[], connectionFeedback:{} },
+  { title:'Assignment 7 — Circuit 7',           componentDefs:[], correctConnections:[], connectionFeedback:{} }
+];
+
+// =====================================================================
+//  CIRCUIT SWITCHING
+// =====================================================================
+
+function switchCircuit(index, skipInstructions) {
+  const tabs = document.querySelectorAll('.circuit-tab');
+  if (tabs[index] && tabs[index].classList.contains('locked')) return;
+
+  // Save wires for current circuit
+  savedWires[activeCircuitIndex] = wires.map(w => ({...w}));
+savedAttempts[activeCircuitIndex] = attemptCount;
+  // Tear down
+  Object.values(components).forEach(c => c.el.remove());
+  components = {};
+  wires = [];
+  wireSvg.innerHTML = '';
+  cancelWire();
+attemptCount = savedAttempts[index] || 0;
+const wBtn = document.getElementById('wireModeBtn');
+const gBtn = document.querySelector('.top-btn.primary');
+if (attemptCount >= MAX_ATTEMPTS) {
+  wBtn.disabled = true; wBtn.style.opacity = '0.4'; wBtn.style.cursor = 'not-allowed';
+  gBtn.disabled = true; gBtn.style.opacity = '0.4'; gBtn.style.cursor = 'not-allowed';
+} else {
+  wBtn.disabled = false; wBtn.style.opacity = ''; wBtn.style.cursor = '';
+  gBtn.disabled = false; gBtn.style.opacity = ''; gBtn.style.cursor = '';
+}
+  activeCircuitIndex = index;
+  circDef = CIRCUITS[index];
+
+  tabs.forEach((t, i) => t.classList.toggle('active', i === index));
+
+  buildComponents();
+
+  if (savedWires[index]) {
+    wires = savedWires[index];
+    wires.forEach(w => { updatePinConnected(w.fromComp, w.fromPin); updatePinConnected(w.toComp, w.toPin); });
+    redrawWires();
+  }
+
+  updateStatusList();
+  resetZoom();
+
+  document.getElementById('statusSection').style.display = 'none';
+  document.getElementById('progressSection').style.display = 'none';
+  document.getElementById('feedbackArea').innerHTML =
+    `<div class="feedback-card info"><div class="fc-header">⚡ ${circDef.title}</div>
+     <p>Click <b>View Instructions</b> to read the assignment, then <b>Begin Assignment</b> to start wiring.</p></div>`;
+  document.getElementById('scoreValue').textContent = '—';
+  document.getElementById('scoreFill').style.width = '0%';
+
+  // Auto-show instructions when switching to a new circuit
+  if (!skipInstructions) {
+    setTimeout(() => showInstructions(), 100);
+  }
+}
+
+// =====================================================================
+//  BUILD COMPONENTS
+// =====================================================================
+
+function buildComponents() {
+  const STACK_X = 40;
+  const STACK_START_Y = 40;
+  const STACK_GAP = 20;
+
+  let currentY = STACK_START_Y;
+  circDef.componentDefs.forEach(def => {
+    const h = def.h || 80;
+    // Override position to stack vertically on the left
+    const stackedDef = { ...def, x: STACK_X, y: currentY };
+    createComponentEl(stackedDef);
+    currentY += h + STACK_GAP;
+  });
+  updateStatusList();
+}
+
+function createComponentEl(def) {
+  const w = def.w || 120, h = def.h || 80;
+
+  const el = document.createElement('div');
+  el.className = 'comp-node';
+  el.id = 'comp-' + def.id;
+  el.style.left = def.x + 'px';
+  el.style.top  = def.y + 'px';
+  el.style.width = w + 'px';
+
+  const body = document.createElement('div');
+  body.className = 'comp-body';
+  body.style.width = w + 'px';
+
+  const imgDiv = document.createElement('div');
+  imgDiv.className = 'comp-img';
+  imgDiv.style.width  = (w - 14) + 'px';
+  imgDiv.style.height = h + 'px';
+
+  if (def.imageSrc) {
+    const img = document.createElement('img');
+    img.src = def.imageSrc;
+    img.alt = def.label;
+    img.onerror = () => {
+      imgDiv.innerHTML = def.emoji;
+      imgDiv.style.fontSize = '2rem';
+      imgDiv.style.display = 'flex';
+      imgDiv.style.alignItems = 'center';
+      imgDiv.style.justifyContent = 'center';
+    };
+    imgDiv.appendChild(img);
+  } else {
+    imgDiv.innerHTML = def.emoji;
+    imgDiv.style.fontSize = '2rem';
+    imgDiv.style.display = 'flex';
+    imgDiv.style.alignItems = 'center';
+    imgDiv.style.justifyContent = 'center';
+  }
+
+  const lbl = document.createElement('div');
+  lbl.className = 'comp-label';
+  lbl.textContent = def.label;
+
+  body.appendChild(imgDiv);
+  body.appendChild(lbl);
+  el.appendChild(body);
+
+  const pinEls = {};
+  def.pins.forEach(pin => {
+    const pinEl = document.createElement('div');
+    pinEl.className = 'pin';
+    pinEl.dataset.comp = def.id;
+    pinEl.dataset.pin  = pin.id;
+
+    const tip = document.createElement('div');
+    tip.className = 'pin-tooltip';
+    tip.textContent = pin.label;
+    tip.style.display = 'none';
+    pinEl.appendChild(tip);
+    pinEl.addEventListener('mouseenter', () => { if (!pinEl.classList.contains('drawing-start')) tip.style.display='block'; });
+    pinEl.addEventListener('mouseleave', () => { tip.style.display='none'; });
+
+    let px, py;
+    if (pin.side === 'left')  {
+      px = 0;
+      py = pin.customY !== undefined ? h * pin.customY + 4 : h/2+4;
+    } else if (pin.side === 'right') {
+      px = w;
+      py = pin.customY !== undefined ? h * pin.customY + 4 : h/2+4;
+    } else if (pin.side === 'top') {
+      const t=pin.total||1, i=pin.index||0;
+      px = pin.customX !== undefined ? w * pin.customX : 7+(t===1?(w-14)/2:(w-14)/(t-1)*i);
+      py = 4;
+    } else if (pin.side === 'bottom') {
+      const t=pin.total||1, i=pin.index||0;
+      px = pin.customX !== undefined ? w * pin.customX : 7+(t===1?(w-14)/2:(w-14)/(t-1)*i);
+      py = h+4;
+    }
+
+    pinEl.style.left = px + 'px';
+    pinEl.style.top  = py + 'px';
+    pinEl.addEventListener('mousedown', onPinMouseDown);
+
+    el.appendChild(pinEl);
+    pinEls[pin.id] = { el: pinEl, localX: px, localY: py };
+  });
+
+  el.addEventListener('mousedown', onCompMouseDown);
+  canvas.appendChild(el);
+  components[def.id] = { def, el, pins: pinEls };
+}
+
+function getPinAbsPos(compId, pinId) {
+  const comp = components[compId]; if (!comp) return null;
+  const p    = comp.pins[pinId];   if (!p)    return null;
+  return { x: parseFloat(comp.el.style.left)+p.localX, y: parseFloat(comp.el.style.top)+p.localY };
+}
+
+// =====================================================================
+//  ZOOM & PAN
+// =====================================================================
+
+function applyTransform() {
+  canvasTransform.style.transform = `translate(${panX}px,${panY}px) scale(${zoom})`;
+  document.getElementById('zoomLabel').textContent = Math.round(zoom*100)+'%';
+}
+
+function adjustZoom(delta, cx, cy) {
+  const newZ = Math.min(3.0, Math.max(0.2, zoom + delta));
+  if (newZ === zoom) return;
+  const wrap = canvasWrap.getBoundingClientRect();
+  const px = cx !== undefined ? cx - wrap.left : wrap.width/2;
+  const py = cy !== undefined ? cy - wrap.top  : wrap.height/2;
+  panX = px - (px - panX) * (newZ / zoom);
+  panY = py - (py - panY) * (newZ / zoom);
+  zoom = newZ;
+  applyTransform();
+}
+
+function resetZoom() { zoom=0.85; panX=20; panY=20; applyTransform(); }
+
+// Scroll to zoom
+canvasWrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  adjustZoom(e.deltaY < 0 ? 0.12 : -0.12, e.clientX, e.clientY);
+}, { passive: false });
+
+// Right-click drag to pan
+canvasWrap.addEventListener('mousedown', e => {
+  if (e.button !== 2) return;
+  e.preventDefault();
+  isPanning = true;
+  panStart = { x: e.clientX - panX, y: e.clientY - panY };
+});
+document.addEventListener('mousemove', e => {
+  if (!isPanning) return;
+  panX = e.clientX - panStart.x;
+  panY = e.clientY - panStart.y;
+  applyTransform();
+});
+document.addEventListener('mouseup', e => { if (e.button===2) isPanning=false; });
+canvasWrap.addEventListener('contextmenu', e => e.preventDefault());
+
+// =====================================================================
+//  DRAG COMPONENTS
+// =====================================================================
+
+function onCompMouseDown(e) {
+  if (wireMode || e.button!==0) return;
+  if (e.target.classList.contains('pin')) return;
+  e.preventDefault(); e.stopPropagation();
+
+  const el = e.currentTarget;
+  // Account for zoom when converting mouse coords to canvas coords
+  const wrap = canvasWrap.getBoundingClientRect();
+  dragState = {
+    el,
+    startX: (e.clientX - wrap.left - panX) / zoom - parseFloat(el.style.left),
+    startY: (e.clientY - wrap.top  - panY) / zoom - parseFloat(el.style.top)
+  };
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', onDragUp);
+}
+
+function onDragMove(e) {
+  if (!dragState) return;
+  const wrap = canvasWrap.getBoundingClientRect();
+  dragState.el.style.left = ((e.clientX - wrap.left - panX) / zoom - dragState.startX) + 'px';
+  dragState.el.style.top  = ((e.clientY - wrap.top  - panY) / zoom - dragState.startY) + 'px';
+  redrawWires();
+}
+
+function onDragUp() {
+  dragState = null;
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragUp);
+}
+
+// =====================================================================
+//  WIRE DRAWING  —  multi-segment routing
+//  Click pin → start wire. Click canvas → add waypoint. Click pin → finish.
+//  ESC cancels. Double-click or right-click a wire to delete it.
+// =====================================================================
+
+function toggleWireMode() {
+  wireMode = !wireMode;
+  const ind = document.getElementById('modeIndicator');
+  const btn = document.getElementById('wireModeBtn');
+  ind.textContent = wireMode ? '✏ WIRE MODE' : '✦ SELECT';
+  ind.className   = wireMode ? 'wire-mode' : '';
+  btn.textContent = wireMode ? '✦ Select Mode' : '✏ Wire Mode';
+  btn.classList.toggle('active-mode', wireMode);
+  if (!wireMode && drawingWire) cancelWire();
+}
+
+function screenToCanvas(sx, sy) {
+  const wrap = canvasWrap.getBoundingClientRect();
+  return { x: (sx - wrap.left - panX)/zoom, y: (sy - wrap.top - panY)/zoom };
+}
+
+// drawingWire: { fromComp, fromPin, points:[{x,y},...] }
+// points[0] = start pin position; additional points are waypoints
+
+function onPinMouseDown(e) {
+  if (!wireMode || e.button!==0) return;
+  e.stopPropagation(); e.preventDefault();
+
+  const compId = e.currentTarget.dataset.comp;
+  const pinId  = e.currentTarget.dataset.pin;
+  const pos    = getPinAbsPos(compId, pinId);
+  if (!pos) return;
+
+  if (!drawingWire) {
+    drawingWire = { fromComp: compId, fromPin: pinId, points: [{x:pos.x, y:pos.y}] };
+    e.currentTarget.classList.add('drawing-start');
+    canvasWrap.addEventListener('click',     onCanvasClick);
+    canvasWrap.addEventListener('mousemove', onWireMouseMove);
+  } else {
+    if (drawingWire.fromComp===compId && drawingWire.fromPin===pinId) { cancelWire(); return; }
+    completeWire(compId, pinId, pos);
+  }
+}
+
+// Left-click anywhere on canvas (not a pin) → add waypoint
+function onCanvasClick(e) {
+  if (!drawingWire || e.button!==0) return;
+  if (e.target.classList.contains('pin')) return;
+  e.stopPropagation();
+  const cp = screenToCanvas(e.clientX, e.clientY);
+  drawingWire.points.push({x:cp.x, y:cp.y});
+  drawPreviewWire();
+}
+
+let tempPath = null;
+function onWireMouseMove(e) {
+  if (!drawingWire) return;
+  const cp = screenToCanvas(e.clientX, e.clientY);
+  drawPreviewWire(cp);
+}
+
+function buildPolylinePath(points, liveEnd) {
+  const allPts = liveEnd ? [...points, liveEnd] : [...points];
+  if (allPts.length < 2) return '';
+  let d = `M ${allPts[0].x} ${allPts[0].y}`;
+  for (let i=1; i<allPts.length; i++) d += ` L ${allPts[i].x} ${allPts[i].y}`;
+  return d;
+}
+
+function drawPreviewWire(liveEnd) {
+  if (tempPath) tempPath.remove();
+  const d = buildPolylinePath(drawingWire.points, liveEnd);
+  if (!d) return;
+  tempPath = document.createElementNS('http://www.w3.org/2000/svg','path');
+  tempPath.setAttribute('d', d);
+  tempPath.setAttribute('class','wire-drawing');
+  wireSvg.appendChild(tempPath);
+}
+
+function completeWire(toComp, toPin, toPos) {
+  const dup = wires.find(w =>
+    (w.fromComp===drawingWire.fromComp&&w.fromPin===drawingWire.fromPin&&w.toComp===toComp&&w.toPin===toPin)||
+    (w.toComp===drawingWire.fromComp&&w.toPin===drawingWire.fromPin&&w.fromComp===toComp&&w.fromPin===toPin)
+  );
+  if (dup) { cancelWire(); return; }
+  wires.push({
+    id:'w'+(wireIdCounter++),
+    fromComp:drawingWire.fromComp, fromPin:drawingWire.fromPin,
+    toComp, toPin, color:currentWireColor,
+    points:[...drawingWire.points, {x:toPos.x, y:toPos.y}]
+  });
+  updatePinConnected(drawingWire.fromComp, drawingWire.fromPin);
+  updatePinConnected(toComp, toPin);
+  cancelWire();
+  redrawWires();
+  updateStatusList();
+}
+
+function updatePinConnected(compId, pinId) {
+  const p = components[compId]?.pins[pinId]?.el;
+  if (p) p.classList.add('connected');
+}
+
+function cancelWire() {
+  if (tempPath) { tempPath.remove(); tempPath=null; }
+  if (drawingWire) {
+    const sp = components[drawingWire.fromComp]?.pins[drawingWire.fromPin]?.el;
+    if (sp) sp.classList.remove('drawing-start');
+  }
+  drawingWire = null;
+  canvasWrap.removeEventListener('click',     onCanvasClick);
+  canvasWrap.removeEventListener('mousemove', onWireMouseMove);
+}
+
+function redrawWires() {
+  wireSvg.querySelectorAll('.wire-path').forEach(p => p.remove());
+  wires.forEach(wire => {
+    let d;
+    if (wire.points && wire.points.length >= 2) {
+      d = buildPolylinePath(wire.points);
+    } else {
+      const from = getPinAbsPos(wire.fromComp, wire.fromPin);
+      const to   = getPinAbsPos(wire.toComp,   wire.toPin);
+      if (!from||!to) return;
+      d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+    }
+    if (!d) return;
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', d);
+    path.setAttribute('class','wire-path');
+    path.setAttribute('stroke', wire.color);
+    path.dataset.wireId = wire.id;
+    path.addEventListener('dblclick',    () => deleteWire(wire.id));
+    path.addEventListener('contextmenu', e=>{ e.preventDefault(); deleteWire(wire.id); });
+    wireSvg.appendChild(path);
+  });
+}
+
+function deleteWire(wireId) {
+  wires = wires.filter(w => w.id!==wireId);
+  Object.entries(components).forEach(([cid,comp]) => {
+    Object.entries(comp.pins).forEach(([pid,pd]) => {
+      pd.el.classList.toggle('connected', wires.some(w=>(w.fromComp===cid&&w.fromPin===pid)||(w.toComp===cid&&w.toPin===pid)));
+    });
+  });
+  redrawWires();
+  updateStatusList();
+}
+
+function clearAllWires() {
+  if (!confirm('Clear all wires for this circuit?')) return;
+  wires = [];
+  Object.values(components).forEach(c => Object.values(c.pins).forEach(p => p.el.classList.remove('connected')));
+  wireSvg.innerHTML = '';
+  updateStatusList();
+  document.getElementById('statusSection').style.display = 'none';
+  document.getElementById('progressSection').style.display = 'none';
+  document.getElementById('feedbackArea').innerHTML = '<div class="feedback-card info"><div class="fc-header">🔄 Reset</div><p>All wires cleared. Start fresh!</p></div>';
+  document.getElementById('scoreValue').textContent = '—';
+  document.getElementById('scoreFill').style.width = '0%';
+}
+
+document.addEventListener('keydown', e => { if (e.key==='Escape') cancelWire(); });
+
+document.querySelectorAll('.color-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentWireColor = btn.dataset.color;
+  });
+});
+
+// =====================================================================
+//  GRADING
+// =====================================================================
+
+function normalizeConn(a,b,c,d) { const s1=a+':'+b,s2=c+':'+d; return s1<s2?[a,b,c,d]:[c,d,a,b]; }
+function connKey(c) { return c[0]+':'+c[1]+'|'+c[2]+':'+c[3]; }
+function getStudentConns() { return wires.map(w=>normalizeConn(w.fromComp,w.fromPin,w.toComp,w.toPin)); }
+
+// Standard correct connections (no ANY_ tokens) — used for non-universal circuits
+function getCorrectConns() { return circDef.correctConnections.map(c=>normalizeConn(c[0],c[1],c[2],c[3])); }
+
+// ── Universal grading ──────────────────────────────────────────────────
+// For circuits with ANY_ tokens, we resolve which physical component
+// fills each universal role, then check connections against all valid
+// expansions using a greedy assignment pass.
+
+function hasUniversal(circuitDef) {
+  return circuitDef.correctConnections.some(c => c[0].startsWith('ANY_') || c[2].startsWith('ANY_'));
+}
+
+// Return the set of physical component IDs that belong to a universal group token
+function universalMembers(token) {
+  if (!circDef.universalGroups) return [];
+  const key = token.replace('ANY_','');
+  return circDef.universalGroups[key] || [];
+}
+
+// Grade a circuit that has universal (interchangeable) components.
+// Returns { correctCount, wrongConns, missingDescs, score, total, p87aHint }
+function gradeUniversal() {
+  const studentConns = getStudentConns();
+  const rules        = circDef.correctConnections;
+  const CF           = circDef.connectionFeedback;
+  const ug           = circDef.universalGroups || {};
+  const studentSet   = new Set(studentConns.map(connKey));
+
+  // ── Resolve horn chain assignment ────────────────────────────────────
+  // Find (horn1, horn2) where horn1 ≠ horn2, and the three chain rules
+  // relay:p87→horn1:hninput, horn1:hnoutput→horn2:hninput,
+  // horn2:hnoutput→anyGround:pin  are all satisfied.
+  const hornPool   = ug.horn1 || [];
+  const groundPool = ug.ground || [];
+  let hornAssignment = null;
+
+  outerHorn:
+  for (const h1 of hornPool) {
+    for (const h2 of hornPool) {
+      if (h1 === h2) continue;
+      const ok1 = studentSet.has(connKey(normalizeConn('relay','p87', h1,'hninput')));
+      const ok2 = studentSet.has(connKey(normalizeConn(h1,'hnoutput', h2,'hninput')));
+      const ok3 = groundPool.some(g => studentSet.has(connKey(normalizeConn(h2,'hnoutput',g,'pin'))));
+      if (ok1 && ok2 && ok3) { hornAssignment = {horn1:h1, horn2:h2}; break outerHorn; }
+    }
+  }
+  // Partial: find best single-rule match if no full chain found
+  if (!hornAssignment) {
+    for (const h1 of hornPool) {
+      for (const h2 of hornPool) {
+        if (h1 === h2) continue;
+        const ok1 = studentSet.has(connKey(normalizeConn('relay','p87', h1,'hninput')));
+        if (ok1) { hornAssignment = {horn1:h1, horn2:h2}; break; }
+      }
+      if (hornAssignment) break;
+    }
+    if (!hornAssignment && hornPool.length >= 2) hornAssignment = {horn1:hornPool[0], horn2:hornPool[1]};
+  }
+
+  // ── Resolve fuse role assignment ─────────────────────────────────────
+  const fusePool = ug.fuse1 || [];
+  let fuse1Id = fusePool[0] || 'fuseA';
+  let fuse2Id = fusePool[1] || 'fuseB';
+
+  // Detect which fuse connects to ECU power vs relay pin 30/85
+  // Supports both horn circuit (fuse1/fuse2 → relay/ecu) and
+  // cooling fan circuit (fuseEcu/fuseRelay → ecuC/relayC)
+  const ecuIds   = ['ecu','ecuC'];
+  const relayIds = ['relay','relayC'];
+
+  for (const fa of fusePool) {
+    const toEcu   = ecuIds.some(eid =>
+      studentSet.has(connKey(normalizeConn(fa,'right',eid,'ecupower')))
+    );
+    const toP85   = relayIds.some(rid =>
+      studentSet.has(connKey(normalizeConn(fa,'right',rid,'p85')))
+    );
+    const toP30   = relayIds.some(rid =>
+      studentSet.has(connKey(normalizeConn(fa,'right',rid,'p30')))
+    );
+    if (toEcu)        { fuse1Id = fa; fuse2Id = fusePool.find(f=>f!==fa) || fuse2Id; break; }
+    if (toP85||toP30) { fuse2Id = fa; fuse1Id = fusePool.find(f=>f!==fa) || fuse1Id; break; }
+  }
+
+  // ── Evaluate every rule ──────────────────────────────────────────────
+  function resolveMembers(token) {
+    if (!token.startsWith('ANY_')) return [token];
+    const key = token.replace('ANY_','');
+    if (key === 'horn1')     return hornAssignment ? [hornAssignment.horn1] : hornPool;
+    if (key === 'horn2')     return hornAssignment ? [hornAssignment.horn2] : hornPool;
+    if (key === 'fuse1')     return [fuse1Id];
+    if (key === 'fuse2')     return [fuse2Id];
+    if (key === 'fuseEcu')   return [fuse1Id];   // cooling fan: fuse to ECU
+    if (key === 'fuseRelay') return [fuse2Id];   // cooling fan: fuse to relay p30
+    if (key === 'ground')    return groundPool;
+    return ug[key] || [];
+  }
+
+  const ruleResults = rules.map(rule => {
+    const [ra, rpa, rb, rpb] = rule;
+    const aM = resolveMembers(ra);
+    const bM = resolveMembers(rb);
+    for (const a of aM) {
+      for (const b of bM) {
+        if (a === b && ra.startsWith('ANY_') && rb.startsWith('ANY_')) continue;
+        if (studentSet.has(connKey(normalizeConn(a,rpa,b,rpb)))) return {satisfied:true, rule};
+      }
+    }
+    // Fallback: try full pool for partial credit
+    const aFull = ra.startsWith('ANY_') ? (ug[ra.replace('ANY_','')] || aM) : aM;
+    const bFull = rb.startsWith('ANY_') ? (ug[rb.replace('ANY_','')] || bM) : bM;
+    for (const a of aFull) {
+      for (const b of bFull) {
+        if (a === b && ra.startsWith('ANY_') && rb.startsWith('ANY_')) continue;
+        if (studentSet.has(connKey(normalizeConn(a,rpa,b,rpb)))) return {satisfied:true, rule};
+      }
+    }
+    return {satisfied:false, rule};
+  });
+
+  const correctCount = ruleResults.filter(r=>r.satisfied).length;
+  const total        = rules.length;
+
+  // Missing
+  const missingDescs = ruleResults.filter(r=>!r.satisfied).map(r => {
+    const [ra,,rb] = r.rule;
+    const aLabel = ra.startsWith('ANY_') ? ra.replace('ANY_','').replace(/\d/,'') : getCompLabel(ra);
+    const bLabel = rb.startsWith('ANY_') ? rb.replace('ANY_','').replace(/\d/,'') : getCompLabel(rb);
+    const hint = CF[ra]||CF[rb]||CF[ra+':'+r.rule[1]]||CF[rb+':'+r.rule[3]]||'';
+    return {aLabel, bLabel, hint};
+  });
+
+  // Wrong wires: not matching any valid expansion of any rule
+  const allValidKeys = new Set();
+  rules.forEach(rule => {
+    const [ra,rpa,rb,rpb] = rule;
+    const aAll = ra.startsWith('ANY_') ? (ug[ra.replace('ANY_','')] || []) : [ra];
+    const bAll = rb.startsWith('ANY_') ? (ug[rb.replace('ANY_','')] || []) : [rb];
+    aAll.forEach(a => bAll.forEach(b => {
+      allValidKeys.add(connKey(normalizeConn(a,rpa,b,rpb)));
+    }));
+  });
+  const wrongConns = studentConns.filter(c => !allValidKeys.has(connKey(c)));
+
+  // ── Pin 87A penalty ──────────────────────────────────────────────────
+  // Works for any relay in any circuit (relay or relayC)
+  const allRelayIds   = ['relay','relayC'];
+  const allBatteryIds = ['battH','battC'];
+
+  const p87aWires = wires.filter(w =>
+    (allRelayIds.includes(w.fromComp) && w.fromPin==='p87a') ||
+    (allRelayIds.includes(w.toComp)   && w.toPin==='p87a')
+  );
+  let p87aPenalty = 0, p87aHint = '';
+  if (p87aWires.length > 0) {
+    p87aPenalty = 1;
+    const p30Connected = wires.some(w =>
+      (allRelayIds.includes(w.fromComp) && w.fromPin==='p30') ||
+      (allRelayIds.includes(w.toComp)   && w.toPin==='p30')
+    );
+    const fuseToBattery = fusePool.some(fid => wires.some(w =>
+      (w.fromComp===fid && allBatteryIds.includes(w.toComp)) ||
+      (w.toComp===fid   && allBatteryIds.includes(w.fromComp))
+    ));
+    p87aHint = (p30Connected && fuseToBattery)
+      ? 'The way this circuit is wired, the component wired to pin 87A will remain on any time the circuit is not activated and will not be controlled by the switch.'
+      : 'Pin 87A is the normally-closed relay output and should be left unconnected in this circuit. Connecting it will cause unintended behavior.';
+  }
+
+  const penalizedCorrect = Math.max(0, correctCount - p87aPenalty);
+  const penalizedTotal   = total + p87aPenalty;
+  const penalizedScore   = penalizedTotal ? Math.round(penalizedCorrect/penalizedTotal*100) : 0;
+
+  return {correctCount:penalizedCorrect, total:penalizedTotal, wrongConns, missingDescs, score:penalizedScore, p87aHint};
+}
+
+function gradeCircuit() {
+  if (!circDef || circDef.componentDefs.length===0) {
+    alert('This assignment has not been set up yet. Check back soon!'); return;
+  }
+
+  if (attemptCount >= MAX_ATTEMPTS) {
+    alert('You have used all 3 attempts. Your final score has been recorded.');
+    return;
+  }
+
+  attemptCount++;
+  const attemptsRemaining = MAX_ATTEMPTS - attemptCount;
+
+  // Reveal the connection status and progress panels now that grading has been attempted
+  //document.getElementById('statusSection').style.display = '';
+  //document.getElementById('progressSection').style.display = '';
+
+  const CF  = circDef.connectionFeedback;
+  const fb  = document.getElementById('feedbackArea');
+  fb.innerHTML = '';
+
+  let score, correctCount, total, wrongConns, missingDescs;
+
+  if (hasUniversal(circDef)) {
+    // ── Universal grading path ──
+    let p87aHint;
+    ({ score, correctCount, total, wrongConns, missingDescs, p87aHint } = gradeUniversal());
+
+    document.getElementById('scoreValue').textContent = score+'%';
+    document.getElementById('scoreFill').style.width  = score+'%';
+
+    const overall = document.createElement('div');
+    overall.className = 'feedback-card '+(score===100?'correct':score>=60?'hint':'wrong');
+    overall.innerHTML = `<div class="fc-header">${score===100?'✅ PERFECT CIRCUIT':score>=60?'⚠ PARTIAL CREDIT':'❌ NEEDS WORK'}</div>
+      <p>${correctCount} of ${total} connections correct &mdash; <b style="color:var(--accent)">${score}%</b></p>`;
+    fb.appendChild(overall);
+
+    // Pin 87A warning card — shown immediately after the score if triggered
+    if (p87aHint) {
+      const warnCard = document.createElement('div');
+      warnCard.className = 'feedback-card wrong';
+      warnCard.innerHTML = `<div class="fc-header">⚠ Pin 87A — Penalty</div>
+        <p>${p87aHint}</p>`;
+      fb.appendChild(warnCard);
+    }
+
+    wrongConns.forEach(c => {
+      const card=document.createElement('div'); card.className='feedback-card wrong';
+      const h1=CF[c[0]+':'+c[1]]||'', h2=CF[c[2]+':'+c[3]]||'';
+      card.innerHTML=`<div class="fc-header">❌ Incorrect Wire</div>
+        <p><b>${getPinLabel(c[0],c[1])}</b><br>↔ <b>${getPinLabel(c[2],c[3])}</b></p>
+        <p style="margin-top:3px">${h1||h2||'This connection is not part of the correct circuit.'}</p>`;
+      fb.appendChild(card);
+    });
+
+    missingDescs.slice(0,5).forEach(m => {
+      const card=document.createElement('div'); card.className='feedback-card hint';
+      card.innerHTML=`<div class="fc-header">💡 Missing Connection</div>
+                ${m.hint?`<p style="margin-top:3px;color:var(--accent)">${m.hint}</p>`:''}`;
+      fb.appendChild(card);
+    });
+    if (missingDescs.length>5) {
+      const m2=document.createElement('div'); m2.className='feedback-card info';
+      m2.innerHTML=`<div class="fc-header">📋 Note</div><p>${missingDescs.length-5} more connections missing. Fix the above first.</p>`;
+      fb.appendChild(m2);
+    }
+
+    // Grade modal for universal
+    let html=`
+      <div class="grade-row"><span>Correct</span><span class="grade-ok">${correctCount} / ${total}</span></div>
+      <div class="grade-row"><span>Wrong Wires</span><span class="${wrongConns.length>0?'grade-fail':'grade-ok'}">${wrongConns.length}</span></div>
+      <div class="grade-row"><span>Missing</span><span class="${missingDescs.length>0?'grade-fail':'grade-ok'}">${missingDescs.length}</span></div>
+      ${p87aHint ? `<div class="grade-row"><span>Pin 87A Penalty</span><span class="grade-fail">−1 pt</span></div>` : ''}
+      <div class="grade-row"><span><b>Final Score</b></span><span style="color:var(--accent);font-weight:700;font-size:1.05rem">${score}%</span></div>`;
+    if (p87aHint) {
+      html+=`<div style="margin-top:10px;padding:8px 10px;background:rgba(204,34,34,0.08);border:1px solid var(--red);border-radius:6px;font-size:0.75rem;color:var(--red);">
+        <b>⚠ Pin 87A:</b> ${p87aHint}</div>`;
+    }
+    if (missingDescs.length>0) {
+      html+='<div style="margin-top:11px;font-family:Rajdhani,sans-serif;font-size:0.7rem;letter-spacing:1px;color:var(--text-muted);margin-bottom:5px;">HINTS FOR MISSING CONNECTIONS</div>';
+      missingDescs.forEach(m=>{
+        html+=`<div class="grade-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
+                    <span class="grade-hint">${m.hint||'Review the circuit diagram for this component.'}</span></div>`;
+      });
+    }
+    document.getElementById('gradeContent').innerHTML = html;
+    document.getElementById('gradeModal').style.display = 'flex';
+
+  } else {
+    // ── Standard grading path (existing circuits) ──
+    const studentConns = getStudentConns();
+    const correctConns = getCorrectConns();
+    const correctSet   = new Set(correctConns.map(connKey));
+    const studentSet   = new Set(studentConns.map(connKey));
+    total        = circDef.correctConnections.length;
+    correctCount = studentConns.filter(c=>correctSet.has(connKey(c))).length;
+    wrongConns   = studentConns.filter(c=>!correctSet.has(connKey(c)));
+    const missingConns = correctConns.filter(c=>!studentSet.has(connKey(c)));
+    score        = total ? Math.round(correctCount/total*100) : 0;
+
+    document.getElementById('scoreValue').textContent = score+'%';
+    document.getElementById('scoreFill').style.width  = score+'%';
+
+    const overall = document.createElement('div');
+    overall.className = 'feedback-card '+(score===100?'correct':score>=60?'hint':'wrong');
+    const attemptLabel = attemptCount === MAX_ATTEMPTS
+  ? `<b style="color:var(--red)">No attempts remaining — this is your final score.</b>`
+  : `Attempts remaining: <b>${attemptsRemaining}</b>`;
+
+overall.innerHTML = `<div class="fc-header">${score===100?'✅ PERFECT CIRCUIT':score>=60?'⚠ PARTIAL CREDIT':'❌ NEEDS WORK'}</div>
+  <p>${correctCount} of ${total} connections correct &mdash; <b style="color:var(--accent)">${score}%</b></p>
+  <p style="margin-top:4px;font-size:0.72rem;">${attemptLabel}</p>`;
+    fb.appendChild(overall);
+
+    wrongConns.forEach(c => {
+      const card=document.createElement('div'); card.className='feedback-card wrong';
+      const h1=CF[c[0]+':'+c[1]]||'', h2=CF[c[2]+':'+c[3]]||'';
+      card.innerHTML=`<div class="fc-header">❌ Incorrect Wire</div>
+        <p><b>${getPinLabel(c[0],c[1])}</b><br>↔ <b>${getPinLabel(c[2],c[3])}</b></p>
+        <p style="margin-top:3px">${h1||h2||'This connection is not part of the correct circuit.'}</p>`;
+      fb.appendChild(card);
+    });
+
+    missingConns.slice(0,5).forEach(c => {
+      const card=document.createElement('div'); card.className='feedback-card hint';
+      const h=CF[c[0]+':'+c[1]]||CF[c[2]+':'+c[3]]||'';
+      card.innerHTML=`<div class="fc-header">💡 Missing Connection</div>
+        <p><b>${getCompLabel(c[0])}</b> has an unconnected pin.</p>
+        ${h?`<p style="margin-top:3px;color:var(--accent)">${h}</p>`:''}`;
+      fb.appendChild(card);
+    });
+    if (missingConns.length>5) {
+      const m=document.createElement('div'); m.className='feedback-card info';
+      m.innerHTML=`<div class="fc-header">📋 Note</div><p>${missingConns.length-5} more connections missing. Fix the above first.</p>`;
+      fb.appendChild(m);
+    }
+
+    showGradeModal(score, correctCount, total, wrongConns, missingConns, CF);
+  }
+
+  if (score===100) {
+    const w=document.createElement('div'); w.className='feedback-card correct';
+    w.innerHTML=`<div class="fc-header">🏆 Circuit Complete!</div>
+      <p>Every connection is correct. Excellent work!</p>`;
+    fb.appendChild(w);
+  }
+
+  updateStatusList();
+  if (attemptCount >= MAX_ATTEMPTS) {
+    document.getElementById('wireModeBtn').disabled = true;
+    document.getElementById('wireModeBtn').style.opacity = '0.4';
+    document.getElementById('wireModeBtn').style.cursor = 'not-allowed';
+    document.querySelector('.top-btn.primary').disabled = true;
+    document.querySelector('.top-btn.primary').style.opacity = '0.4';
+    document.querySelector('.top-btn.primary').style.cursor = 'not-allowed';
+    if (wireMode) toggleWireMode();
+  }
+}
+
+function getPinLabel(compId, pinId) {
+  const comp = circDef.componentDefs.find(c=>c.id===compId); if (!comp) return compId+':'+pinId;
+  const pin  = comp.pins.find(p=>p.id===pinId);
+  return comp.label + ' — ' + (pin?pin.label:pinId);
+}
+function getCompLabel(compId) { return circDef.componentDefs.find(c=>c.id===compId)?.label||compId; }
+
+function showGradeModal(score, correctCount, total, wrongConns, missingConns, CF) {
+  let html=`
+    <div class="grade-row"><span>Correct</span><span class="grade-ok">${correctCount} / ${total}</span></div>
+    <div class="grade-row"><span>Wrong Wires</span><span class="${wrongConns.length>0?'grade-fail':'grade-ok'}">${wrongConns.length}</span></div>
+    <div class="grade-row"><span>Missing</span><span class="${missingConns.length>0?'grade-fail':'grade-ok'}">${missingConns.length}</span></div>
+    <div class="grade-row"><span><b>Final Score</b></span><span style="color:var(--accent);font-weight:700;font-size:1.05rem">${score}%</span></div>`;
+  if (missingConns.length>0) {
+    html+='<div style="margin-top:11px;font-family:Rajdhani,sans-serif;font-size:0.7rem;letter-spacing:1px;color:var(--text-muted);margin-bottom:5px;">HINTS FOR MISSING CONNECTIONS</div>';
+    missingConns.forEach(c=>{
+      const h=CF[c[0]+':'+c[1]]||CF[c[2]+':'+c[3]]||'Review the circuit diagram for this component.';
+      html+=`<div class="grade-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
+        <span style="color:var(--accent)">${getCompLabel(c[0])} ↔ ${getCompLabel(c[2])}</span>
+        <span class="grade-hint">${h}</span></div>`;
+    });
+  }
+  document.getElementById('gradeContent').innerHTML = html;
+  document.getElementById('gradeModal').style.display = 'flex';
+}
+
+function updateStatusList() {
+  const list = document.getElementById('statusList');
+  list.innerHTML = '';
+  if (!circDef || circDef.correctConnections.length===0) {
+    list.innerHTML='<div style="font-size:0.69rem;color:var(--text-muted);">No circuit loaded.</div>';
+    document.getElementById('progressText').textContent='—'; return;
+  }
+
+  if (hasUniversal(circDef)) {
+    // Universal status: show rule descriptions with satisfied state
+    const { correctCount, total } = gradeUniversal();
+    const rules = circDef.correctConnections;
+    const studentSet = new Set(getStudentConns().map(connKey));
+
+    rules.forEach(rule => {
+      const [ra,,rb] = rule;
+      const aM = ra.startsWith('ANY_') ? universalMembers(ra) : [ra];
+      const bM = rb.startsWith('ANY_') ? universalMembers(rb) : [rb];
+      let satisfied = false;
+      for (const a of aM) for (const b of bM) {
+        if (studentSet.has(connKey(normalizeConn(a,rule[1],b,rule[3])))) { satisfied=true; break; }
+      }
+      const aLabel = ra.startsWith('ANY_') ? ra.replace('ANY_','').replace(/\d/,'') : getCompLabel(ra);
+      const bLabel = rb.startsWith('ANY_') ? rb.replace('ANY_','').replace(/\d/,'') : getCompLabel(rb);
+      const row=document.createElement('div'); row.className='status-item';
+      row.innerHTML=`<div class="status-dot ${satisfied?'ok':''}"></div><span>${aLabel} → ${bLabel}</span>`;
+      list.appendChild(row);
+    });
+    document.getElementById('progressText').textContent=`${correctCount} / ${total} connections`;
+
+  } else {
+    // Standard status
+    const studentSet  = new Set(getStudentConns().map(connKey));
+    const correctConns = getCorrectConns();
+    const correctSet  = new Set(correctConns.map(connKey));
+
+    correctConns.forEach(c=>{
+      const done=studentSet.has(connKey(c));
+      const row=document.createElement('div'); row.className='status-item';
+      row.innerHTML=`<div class="status-dot ${done?'ok':''}"></div><span>${getCompLabel(c[0])} → ${getCompLabel(c[2])}</span>`;
+      list.appendChild(row);
+    });
+    getStudentConns().filter(c=>!correctSet.has(connKey(c))).forEach(c=>{
+      const row=document.createElement('div'); row.className='status-item';
+      row.innerHTML=`<div class="status-dot err"></div><span style="color:var(--red)">${getCompLabel(c[0])} ✕ ${getCompLabel(c[2])}</span>`;
+      list.appendChild(row);
+    });
+
+    const correct=getStudentConns().filter(c=>correctSet.has(connKey(c))).length;
+    document.getElementById('progressText').textContent=`${correct} / ${circDef.correctConnections.length} connections`;
+  }
+}
+
+// =====================================================================
+//  INSTRUCTIONS PANEL
+// =====================================================================
+
+function showInstructions() {
+  const overlay = document.getElementById('instructionsOverlay');
+  const title   = document.getElementById('instructionsTitle');
+  const content = document.getElementById('instructionsContent');
+
+  if (circDef && circDef.instructions) {
+    title.textContent   = circDef.title.toUpperCase();
+    content.innerHTML   = circDef.instructions;
+  } else {
+    title.textContent   = 'INSTRUCTIONS';
+    content.innerHTML   = `
+      <p style="margin-bottom:10px;">No instructions have been added for this assignment yet.</p>
+      <p>To add instructions, open the HTML file in a text editor and find the circuit definition in the <code>CIRCUITS</code> array. Add an <code>instructions</code> field with your HTML content.</p>
+      <p style="margin-top:10px;">Example:<br><code>instructions: '&lt;b&gt;Task:&lt;/b&gt; Wire the circuit as shown...'</code></p>
+    `;
+  }
+
+  overlay.style.display = 'flex';
+}
+
+function closeInstructions() {
+  document.getElementById('instructionsOverlay').style.display = 'none';
+}
+
+function beginAssignment() {
+  // Close instructions overlay and make sure wire mode is off so
+  // students start in select mode (can drag components first)
+  document.getElementById('instructionsOverlay').style.display = 'none';
+  if (wireMode) toggleWireMode();
+  // Update feedback area
+  document.getElementById('feedbackArea').innerHTML =
+    `<div class="feedback-card info">
+      <div class="fc-header">⚡ Assignment Started</div>
+      <p>Place and connect your components. Click <b>✏ Wire Mode</b> to draw wires, then click <b>⚡ Grade</b> when finished.</p>
+     </div>`;
+}
+
+// Update the left panel instructions to reflect multi-segment wiring
+document.querySelector('#leftpanel .panel-section div[style]').innerHTML = `
+  <b style="color:var(--accent2)">1.</b> Click <b>View Instructions</b> to read the task.<br>
+  <b style="color:var(--accent2)">2.</b> Click <b>Wire Mode</b> button to start wiring.<br>
+  <b style="color:var(--accent2)">3.</b> Click a <b>pin</b> to begin a wire.<br>
+  <b style="color:var(--accent2)">4.</b> Click anywhere on the canvas to add <b>waypoints</b> — the wire bends at each click.<br>
+  <b style="color:var(--accent2)">5.</b> Click a second <b>pin</b> to finish the wire.<br>
+  <b style="color:var(--accent2)">6.</b> <b>Scroll wheel</b> = zoom. <b>Right-click drag</b> = pan.<br>
+  <b style="color:var(--accent2)">7.</b> In <b>Select Mode</b>, drag components to reposition.<br>
+  <b style="color:var(--accent2)">8.</b> <b>Double-click</b> a wire to delete it.<br>
+  <b style="color:var(--accent2)">9.</b> <b>ESC</b> cancels a wire in progress.<br>
+  <b style="color:var(--accent2)">10.</b> Click <b>⚡ Grade</b> when finished.
+`;
+
+// =====================================================================
+//  INIT
+// =====================================================================
+switchCircuit(0, true);  // true = skip auto-instructions on first load
+// Show instructions after a brief delay so the canvas renders first
+setTimeout(() => showInstructions(), 400);
+</script>
+</body>
+</html>
